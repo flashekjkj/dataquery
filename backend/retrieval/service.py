@@ -5,6 +5,7 @@ from typing import List,Tuple
 from .store import FieldDocument,SchemaStore
 from app.model_client import ModelClient
 from data.database import SCHEMA
+from retrieval.ranker import BM25Index,HybridRetriever
 
 def cosine_similarity(vec_a:List[float],vec_b:List[float]) -> float:
     """计算余弦相似度"""
@@ -69,3 +70,14 @@ class SchemaIndex:
         score_list.sort(key=lambda x: x[1],reverse=True)
         return score_list[:top_k]
 
+def build_hybrid_index(model_client:ModelClient) -> HybridRetriever:
+    # 构建向量索引
+    vec_index = SchemaIndex(model_client)
+    vec_index.build()
+    all_docs = vec_index.documents
+    # 构建BM25索引
+    bm25_index = BM25Index()
+    bm25_index.build(all_docs)
+
+    hybrid_retriever = HybridRetriever(vec_index,bm25_index)
+    return hybrid_retriever

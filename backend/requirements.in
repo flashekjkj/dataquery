@@ -3,3 +3,5 @@ python-dotenv
 pydantic-settings
 duckdb
 openai
+rank-bm25 
+jieba

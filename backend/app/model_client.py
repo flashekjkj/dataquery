@@ -74,20 +74,3 @@ class ModelClient:
         else:
             raise NotImplementedError("真实Rerank接口尚未实现，请使用mock模式")
 
-# 自测入口：直接运行model_client.py测试mock
-if __name__ == "__main__":
-    client = ModelClient(mock=True)
-
-    print("===== LLM Mock =====")
-    llm_res = client.llm_invoke("帮我查华东地区客户订单")
-    print(llm_res.content)
-
-    print("\n===== Embedding Mock =====")
-    emb_res = client.embedding("客户订单表")
-    print(f"向量长度：{len(emb_res.vector)}")
-
-    print("\n===== Rerank Mock =====")
-    docs = ["客户表包含客户名称地区", "订单表包含订单金额", "产品表存放产品分类"]
-    rerank_res = client.rerank("查询华东客户订单", docs)
-    for item in rerank_res.results:
-        print(f"score:{item.score:.2f}, text:{item.text}")
