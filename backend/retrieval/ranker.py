@@ -4,6 +4,7 @@ import jieba
 from rank_bm25 import BM25Okapi
 
 from retrieval.store import FieldDocument
+from app.model_client import ModelClient
 
 class BM25Index:
     """BM25稀疏索引检索"""
@@ -67,21 +68,59 @@ def reciprocal_rank_fusion(
     final_list.sort(key=lambda x: x[1],reverse=True)
     return final_list
 
+def rerank_candidates(
+        model_client:ModelClient,
+        query:str,
+        candidates:List[Tuple[FieldDocument,float]]
+) -> List[Tuple[FieldDocument,float]]:
+        """
+        对RRF输出的候选集合执行重排
+        :param model_client: 模型客户端，调用rerank接口
+        :param query: 用户原始query
+        :param candidates: RRF输出的候选列表 [(FieldDocument, rrf_score)]
+        :return: 按rerank分数重新排序后的列表
+        """
+        doc_texts = [item[0].semantic_text for item in candidates]
+        rerank_resp = model_client.rerank(query=query,documents=doc_texts)
+        rerank_result:List[Tuple[FieldDocument,float]] = []
+
+        for item in rerank_resp.results:
+            original_doc = candidates[item.index][0]
+            rerank_result.append((original_doc,item.score))
+        rerank_result.sort(key=lambda x: x[1],reverse=True)
+        return rerank_result
+
+
 class HybridRetriever:
-    """混合检索主类：BM25+向量检索-RRF融合"""
-    def __init__(self,vector_index,bm25_index:BM25Index):
+    """混合检索主类：BM25+向量检索-RRF融合-rerank精排"""
+    def __init__(self,vector_index,bm25_index:BM25Index,model_client:ModelClient):
         self.vector_index = vector_index
         self.bm25_index = bm25_index
+        self.model_client = model_client
 
-    def retrieve(self,query:str,top_k:int = 3,recall_top_k:int = 5) -> List[Tuple[FieldDocument,float]]:
+    def retrieve(
+            self,
+            query:str,
+            top_k:int = 3,
+            recall_top_k:int = 5,
+            use_rerank:bool = False,
+            rerank_candidate_num:int = 8   
+        ) -> List[Tuple[FieldDocument,float]]:
         """
         :param query: 用户自然语言查询
         :param top_k: 最终返回给Agent的文档数量
         :param recall_top_k: 两路各自召回的候选数量（RRF输入候选，建议5~8）
+        :param use_rerank: 是否开启rerank精排开关
+        :param rerank_candidate_num: RRF融合后送入rerank的候选条数（6~10）
         """
         # 两路并行召回
         bm25_candidates = self.bm25_index.retrieve(query,top_k=recall_top_k)
         vector_candidates = self.vector_index.retrieve(query,top_k=recall_top_k)
 
         fused = reciprocal_rank_fusion(bm25_candidates,vector_candidates)
+
+        if use_rerank and len(fused) > 0:
+            candidates_for_rerank = fused[:rerank_candidate_num]
+            fused = rerank_candidates(self.model_client,query,candidates_for_rerank)
+
         return fused[:top_k]

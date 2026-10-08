@@ -5,3 +5,5 @@ duckdb
 openai
 rank-bm25 
 jieba
+FlagEmbedding
+torch

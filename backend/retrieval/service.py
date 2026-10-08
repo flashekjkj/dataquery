@@ -79,5 +79,5 @@ def build_hybrid_index(model_client:ModelClient) -> HybridRetriever:
     bm25_index = BM25Index()
     bm25_index.build(all_docs)
 
-    hybrid_retriever = HybridRetriever(vec_index,bm25_index)
+    hybrid_retriever = HybridRetriever(vec_index,bm25_index,model_client)
     return hybrid_retriever
