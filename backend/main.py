@@ -1,198 +1,102 @@
 from __future__ import annotations
-import json
+import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
 
+from agent.graph import build_graph
 from app.model_client import ModelClient
-from data.database import RELATIONS
-from retrieval.ranker import HybridRetriever
 from retrieval.service import build_hybrid_index
-from sql.executor import SQLExecutor, SqlExecuteError
-from sql.generator import generate_sql_with_repair
-from sql.sql_prompts import (
-    ANSWER_FROM_RESULT_SYSTEM_PROMPT,
-    ANSWER_FROM_RESULT_USER_TPL,
-    CHAT_SYSTEM_PROMPT,
-    ROUTE_SYSTEM_PROMPT,
-    ROUTE_USER_TPL,
-)
+from sql.executor import SQLExecutor
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "data" / "demo_ecom.duckdb"
 
-# 混合检索召回的字段文档数量（喂给SQL生成的schema上下文）
-TOP_K_SCHEMA = 8
-# 需要采样实际取值的字段角色：维度/过滤/时间字段的枚举值对写WHERE条件最有价值
-SAMPLE_ROLES = {"dimension", "filter", "time"}
-# 最多采样多少个字段的取值，控制prompt长度
-MAX_SAMPLE_FIELDS = 6
 
-
-def route_question(model_client: ModelClient, question: str) -> str:
+def build_agent(max_attempts: int = 3):
     """
-    意图路由：判断用户问题是闲聊/常识（chat）还是需要查数据库（data）
-    返回 "data" 或 "chat"
+    构建Agent全链路：模型客户端 + 混合检索 + SQL执行器 + LangGraph图
+    返回编译好的图（图内部已通过闭包持有全部依赖）
     """
-    resp = model_client.llm_invoke(
-        prompt=ROUTE_USER_TPL.format(question=question),
-        system_prompt=ROUTE_SYSTEM_PROMPT,
-    )
-    content = (resp.content or "").strip().lower()
-    if "data" in content:
-        return "data"
-    if "chat" in content:
-        return "chat"
-    # 解析失败时默认走数据查询（本项目是数据问答助手，宁可多查不漏查）
-    return "data"
+    model_client = ModelClient(mock=False)
+    print("正在构建混合检索索引（对所有字段文档生成embedding）...")
+    hybrid = build_hybrid_index(model_client)
+    executor = SQLExecutor(str(DB_PATH))
+    graph = build_graph(model_client, hybrid, executor, max_attempts=max_attempts)
+    return graph
 
 
-def answer_directly(model_client: ModelClient, question: str) -> str:
-    """闲聊/常识问题：LLM直接回答，不碰数据库"""
-    resp = model_client.llm_invoke(
-        prompt=question,
-        system_prompt=CHAT_SYSTEM_PROMPT,
-    )
-    return (resp.content or "").strip()
-
-
-def retrieve_schema_context(
-    hybrid: HybridRetriever,
-    executor: SQLExecutor,
-    question: str,
-) -> Tuple[List[Any], List[str], Dict[str, List[Any]]]:
+def ask_data_agent(graph, user_question: str, thread_id: str = None) -> dict:
     """
-    为SQL生成准备上下文：
-    1. 混合检索召回top_k个字段文档
-    2. 提取命中表之间的关联关系
-    3. 对维度/过滤/时间字段采样实际取值（value retrieval）
+    LangGraph版Agent入口：一次invoke运行整张图
+    - 初始state必须带上attempts和attempts_log：attempts参与加法运算，
+      attempts_log是reducer键，两者都需要显式初始值
+    - 默认每次提问使用全新thread_id：checkpointer会把输入归并进旧检查点，
+      共用线程会导致attempts_log等状态在问题之间残留。
+      阶段4做多轮会话时改为由调用方传入会话级thread_id
     """
-    ranked = hybrid.retrieve(question, top_k=TOP_K_SCHEMA)
-    field_docs = [doc for doc, _score in ranked]
+    if thread_id is None:
+        thread_id = uuid.uuid4().hex
 
-    # 表关联：只保留与命中的表相关的条目，避免无关关系干扰LLM
-    hit_tables = {doc.table_name for doc in field_docs}
-    relations = [
-        f"{r['left_table']}.{r['left_field']} = {r['right_table']}.{r['right_field']}"
-        f"（{r['description']}）"
-        for r in RELATIONS
-        if r["left_table"] in hit_tables or r["right_table"] in hit_tables
-    ]
-
-    # 字段样例值：采样失败（如字段类型不支持）就跳过，不阻塞主流程
-    value_samples: Dict[str, List[Any]] = {}
-    sampled = 0
-    for doc in field_docs:
-        if doc.role not in SAMPLE_ROLES or sampled >= MAX_SAMPLE_FIELDS:
-            continue
-        try:
-            samples = executor.sample_values(doc.table_name, doc.field_name, n=5)
-            value_samples[f"{doc.table_name}.{doc.field_name}"] = samples
-            sampled += 1
-        except SqlExecuteError:
-            continue
-
-    return field_docs, relations, value_samples
-
-
-def format_query_result_for_llm(query_result) -> str:
-    """把QueryResult对象转换为LLM可读的JSON字符串"""
-    if query_result is None:
-        return "无查询结果"
-    content = {
-        "columns": query_result.columns,
-        "rows": query_result.rows[:20],
-        "row_count": query_result.row_count,
-        "is_truncated": query_result.is_truncated,
-    }
-    return json.dumps(content, ensure_ascii=False, indent=2)
-
-
-def generate_natural_answer(
-    model_client: ModelClient,
-    user_question: str,
-    final_sql: str,
-    query_result,
-) -> str:
-    """调用LLM，把SQL执行结果整理成自然语言回答"""
-    result_str = format_query_result_for_llm(query_result)
-    user_prompt = ANSWER_FROM_RESULT_USER_TPL.format(
-        user_question=user_question,
-        sql=final_sql,
-        query_result=result_str,
-    )
-    resp = model_client.llm_invoke(
-        prompt=user_prompt,
-        system_prompt=ANSWER_FROM_RESULT_SYSTEM_PROMPT,
-    )
-    return (resp.content or "").strip()
-
-
-def ask_data_agent(
-    model_client: ModelClient,
-    hybrid: HybridRetriever,
-    executor: SQLExecutor,
-    user_question: str,
-    max_attempts: int = 3,
-) -> dict:
-    """
-    基础Agent主逻辑：
-    1. 意图路由：闲聊直接回答；数据问题走查询链路
-    2. 混合检索schema -> 生成SQL -> 执行 -> 失败自修复（最多max_attempts轮）
-    3. 查询结果 -> LLM整理成自然语言回答
-    """
-    route = route_question(model_client, user_question)
-
-    if route == "chat":
-        return {
-            "success": True,
-            "route": "chat",
-            "user_question": user_question,
-            "retrieved_docs": [],
-            "final_sql": None,
-            "query_result": None,
-            "answer": answer_directly(model_client, user_question),
-            "attempts": [],
-        }
-
-    # 数据问题：准备schema上下文（检索 + 关系 + 取值样例）
-    field_docs, relations, value_samples = retrieve_schema_context(
-        hybrid, executor, user_question
+    final_state = graph.invoke(
+        {"user_question": user_question, "attempts": 0, "attempts_log": []},
+        config={"configurable": {"thread_id": thread_id}},
     )
 
-    gen_result = generate_sql_with_repair(
-        question=user_question,
-        field_docs=field_docs,
-        relations=relations,
-        value_samples=value_samples,
-        model_client=model_client,
-        executor=executor,
-        max_attempts=max_attempts,
-    )
-
-    if gen_result.success:
-        answer = generate_natural_answer(
-            model_client=model_client,
-            user_question=user_question,
-            final_sql=gen_result.final_sql,
-            query_result=gen_result.query_result,
-        )
-    else:
-        # 自修复轮次耗尽：诚实告知失败原因，不编造结果
-        last_error = gen_result.attempts[-1].error if gen_result.attempts else "未知错误"
-        answer = (
-            f"抱歉，尝试了 {len(gen_result.attempts)} 次后仍未生成可执行的SQL。"
-            f"最后一次错误：{last_error}"
-        )
+    route = final_state.get("route") or "data"
+    field_docs = final_state.get("field_docs") or []
+    attempts_log = final_state.get("attempts_log") or []
 
     return {
-        "success": gen_result.success,
-        "route": "data",
+        "success": bool(final_state.get("success")) if route == "data" else True,
+        "route": route,
         "user_question": user_question,
         "retrieved_docs": [doc.doc_id for doc in field_docs],
-        "final_sql": gen_result.final_sql,
-        "query_result": gen_result.query_result,
-        "answer": answer,
-        "attempts": [a.model_dump() for a in gen_result.attempts],
+        "final_sql": final_state.get("sql"),
+        "query_result": final_state.get("query_result"),
+        "answer": final_state.get("answer") or "",
+        "attempts": [{"sql": s, "error": e} for s, e in attempts_log],
     }
 
 
+def main() -> None:
+    graph = build_agent()
+    print("==== AskData 数据问答Agent（LangGraph版）====")
+    print("输入问题提问，输入 exit 退出，Ctrl+C 也可退出\n")
+
+    while True:
+        try:
+            user_input = input("👤 用户：").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n👋 退出程序")
+            break
+
+        if user_input.lower() in ("exit", "quit", "q"):
+            print("👋 退出程序")
+            break
+        if not user_input:
+            continue
+
+        try:
+            output = ask_data_agent(graph, user_input)
+        except Exception as e:
+            print(f"\n❌ 系统异常：{e}")
+            print("-" * 60)
+            continue
+
+        print(f"\n🤖 Agent回答：{output['answer']}")
+        if output["route"] == "data":
+            print(f"[DEBUG] 命中字段：{', '.join(output['retrieved_docs'])}")
+            print(f"[DEBUG] 执行SQL：{output['final_sql']}")
+            if not output["success"]:
+                for i, att in enumerate(output["attempts"], 1):
+                    print(f"[DEBUG] 第{i}轮SQL：{att['sql']}")
+                    if att["error"]:
+                        print(f"[DEBUG] 第{i}轮错误：{att['error']}")
+            elif output["query_result"] is not None:
+                qr = output["query_result"]
+                flag = "（已截断）" if qr.is_truncated else ""
+                print(f"[DEBUG] 返回 {qr.row_count} 行{flag}")
+        print("-" * 60)
+
+
+if __name__ == "__main__":
+    main()

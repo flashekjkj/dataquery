@@ -108,6 +108,35 @@ def generate_sql(
     sql = extract_sql(resp.content)
     return sql
 
+def generate_repair_sql(
+        question:str,
+        field_docs:List[Any],
+        relations:List[str],
+        value_samples:Dict[str,List[Any]],
+        old_sql:str,
+        error_msg:Optional[str],
+        model_client:ModelClient
+) -> str:
+    """组修复prompt -> llm调用 -> extract_sql提取修复后的SQL"""
+    field_text = _format_field_docs(field_docs)
+    rel_text = _format_relations(relations)
+    val_text = _format_value_samples(value_samples)
+
+    user_prompt = REPAIR_SQL_USER_TPL.format(
+        question=question,
+        field_docs_text=field_text,
+        relations_text=rel_text,
+        value_samples_text=val_text,
+        old_sql=old_sql,
+        error_msg=error_msg
+    )
+
+    resp = model_client.llm_invoke(
+        prompt=user_prompt,
+        system_prompt=REPAIR_SQL_SYSTEM_PROMPT
+    )
+    return extract_sql(resp.content)
+
 def generate_sql_with_repair(
         question:str,
         field_docs:List[Any],

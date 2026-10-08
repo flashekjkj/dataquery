@@ -5,10 +5,7 @@ from pathlib import Path
 BASE_BACKEND = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_BACKEND))
 
-from main import ask_data_agent
-from app.model_client import ModelClient
-from retrieval.service import build_hybrid_index
-from sql.executor import SQLExecutor
+from main import build_agent, ask_data_agent
 
 QUESTIONS = [
     "你好，介绍一下你自己",
@@ -20,16 +17,13 @@ QUESTIONS = [
 
 
 def main():
-    model_client = ModelClient(mock=False)
-    print("构建混合检索索引...")
-    hybrid = build_hybrid_index(model_client)
-    executor = SQLExecutor(str(BASE_BACKEND / "data" / "demo_ecom.duckdb"))
+    graph = build_agent()
 
     for q in QUESTIONS:
         print("=" * 60)
         print(f"问题：{q}")
         try:
-            out = ask_data_agent(model_client, hybrid, executor, q)
+            out = ask_data_agent(graph, q)
         except Exception as e:
             print(f"❌ 异常：{type(e).__name__}: {e}")
             continue
