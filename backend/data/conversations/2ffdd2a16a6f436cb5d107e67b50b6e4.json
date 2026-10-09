@@ -1,0 +1,47 @@
+{
+  "turns": [
+    {
+      "role": "user",
+      "content": "华东地区销售额是多少",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-09T08:54:21.500430"
+    },
+    {
+      "role": "assistant",
+      "content": "华东地区销售额为 8,795,238.47 元。",
+      "sql": "SELECT SUM(paid_amount) AS sales_amount FROM orders WHERE region = '华东';",
+      "answer": "华东地区销售额为 8,795,238.47 元。",
+      "timestamp": "2026-10-09T08:54:21.503333"
+    },
+    {
+      "role": "user",
+      "content": "那华南呢？",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-09T08:54:35.032007"
+    },
+    {
+      "role": "assistant",
+      "content": "华南的销售额为 7,913,004.85 元。",
+      "sql": "SELECT SUM(paid_amount) AS 销售额 FROM orders WHERE region = '华南';",
+      "answer": "华南的销售额为 7,913,004.85 元。",
+      "timestamp": "2026-10-09T08:54:35.033005"
+    },
+    {
+      "role": "user",
+      "content": "按商品品类拆一下",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-09T08:54:59.098248"
+    },
+    {
+      "role": "assistant",
+      "content": "华南区域按商品品类的销售额拆分如下：\n\n- 智能硬件：235.24万元\n- 企业服务：195.97万元\n- 数据产品：183.23万元\n- 安全服务：176.86万元",
+      "sql": "SELECT category AS 商品品类, SUM(paid_amount) AS 销售额 FROM orders WHERE region = '华南' GROUP BY category ORDER BY 销售额 DESC;",
+      "answer": "华南区域按商品品类的销售额拆分如下：\n\n- 智能硬件：235.24万元\n- 企业服务：195.97万元\n- 数据产品：183.23万元\n- 安全服务：176.86万元",
+      "timestamp": "2026-10-09T08:54:59.101347"
+    }
+  ],
+  "summary": ""
+}

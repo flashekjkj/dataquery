@@ -5,6 +5,8 @@ config:
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
+	load_memory_node(load_memory_node)
+	rewrite_node(rewrite_node)
 	route_node(route_node)
 	chat_node(chat_node)
 	retrieve_node(retrieve_node)
@@ -12,17 +14,22 @@ graph TD;
 	execute_node(execute_node)
 	repair_node(repair_node)
 	answer_node(answer_node)
+	save_memory_node(save_memory_node)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> route_node;
+	__start__ --> load_memory_node;
+	answer_node --> save_memory_node;
+	chat_node --> save_memory_node;
 	execute_node -.-> answer_node;
 	execute_node -.-> repair_node;
 	generate_sql_node --> execute_node;
+	load_memory_node -.-> rewrite_node;
+	load_memory_node -.-> route_node;
 	repair_node --> generate_sql_node;
 	retrieve_node --> generate_sql_node;
+	rewrite_node --> route_node;
 	route_node -. &nbsp;chat&nbsp; .-> chat_node;
 	route_node -. &nbsp;data&nbsp; .-> retrieve_node;
-	answer_node --> __end__;
-	chat_node --> __end__;
+	save_memory_node --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

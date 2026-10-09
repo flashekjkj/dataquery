@@ -1,6 +1,7 @@
 from __future__ import annotations
 import hashlib
 import sys
+import tempfile
 from pathlib import Path
 
 BASE_BACKEND = Path(__file__).resolve().parent.parent
@@ -13,6 +14,8 @@ from sql.sql_prompts import (
     ROUTE_SYSTEM_PROMPT,
 )
 from agent.graph import build_graph
+from memory.conversation import ConversationMemory
+from memory.long_term import LongTermMemoryStore
 from retrieval.service import build_hybrid_index
 from sql.executor import SQLExecutor
 
@@ -60,7 +63,14 @@ class FakeClient:
 def _build_graph(client, max_attempts: int = 3):
     hybrid = build_hybrid_index(client)
     executor = SQLExecutor(str(DB_PATH))
-    return build_graph(client, hybrid, executor, max_attempts=max_attempts)
+    # 记忆存储在临时目录，测试互不干扰、不污染项目数据
+    conv_memory = ConversationMemory(data_root=Path(tempfile.mkdtemp()))
+    long_term_memory = LongTermMemoryStore(data_root=Path(tempfile.mkdtemp()))
+    return build_graph(
+        client, hybrid, executor,
+        conv_memory, long_term_memory,
+        max_attempts=max_attempts
+    )
 
 
 def _invoke(graph, question: str) -> dict:
@@ -75,8 +85,9 @@ def test_graph_structure():
     graph = _build_graph(FakeClient(["SELECT 1"]))
     node_names = set(graph.get_graph().nodes.keys()) - {"__start__", "__end__"}
     expected = {
-        "route_node", "chat_node", "retrieve_node",
-        "generate_sql_node", "execute_node", "repair_node", "answer_node",
+        "load_memory_node", "rewrite_node", "route_node", "chat_node",
+        "retrieve_node", "generate_sql_node", "execute_node", "repair_node",
+        "answer_node", "save_memory_node",
     }
     assert node_names == expected, f"节点集合不符：{node_names}"
     edges = {(e.source, e.target) for e in graph.get_graph().edges}
@@ -138,11 +149,11 @@ def test_chat_route():
 
 
 def test_ask_agent_thread_isolation():
-    """连续两次提问（默认每次新thread_id）：attempts_log互不残留"""
+    """两个不同会话（不同thread_id）：attempts_log互不残留"""
     from main import ask_data_agent
     graph = _build_graph(FakeClient(["SELECT customer_id FROM customers LIMIT 1"]))
-    out1 = ask_data_agent(graph, "问题A")
-    out2 = ask_data_agent(graph, "问题B")
+    out1 = ask_data_agent(graph, "问题A", thread_id="sess-a")
+    out2 = ask_data_agent(graph, "问题B", thread_id="sess-b")
     assert len(out1["attempts"]) == 1, f"问题A日志被污染：{out1['attempts']}"
     assert len(out2["attempts"]) == 1, f"问题B日志被污染：{out2['attempts']}"
     assert out1["answer"] == "【测试回答】"

@@ -3,3 +3,4 @@ __pycache__/
 .vscode/
 DEV_LOG.md
 COMMAND.md
+test.py

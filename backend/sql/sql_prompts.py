@@ -15,6 +15,9 @@ GENERATE_SQL_SYSTEM_PROMPT = """
 GENERATE_SQL_USER_TPL = """
 用户问题：{question}
 
+【用户偏好】
+{user_profile}
+
 【可用字段文档】
 {field_docs_text}
 
@@ -39,6 +42,9 @@ REPAIR_SQL_SYSTEM_PROMPT = """
 
 REPAIR_SQL_USER_TPL = """
 用户原始问题：{question}
+
+【用户偏好】
+{user_profile}
 
 【可用字段文档】
 {field_docs_text}
@@ -92,4 +98,66 @@ ROUTE_USER_TPL = """
 CHAT_SYSTEM_PROMPT = """
 你是AskData数据问答助手。用户提问与数据库无关时，简洁友好地回答；
 如果问题可能涉及本系统数据库（客户、订单、商品等业务数据），引导用户提出具体的数据问题。
+"""
+
+# 指代消解Prompt：结合历史把问题改写为独立完整问题
+REWRITE_QUERY_SYSTEM_PROMPT = """
+你是对话问题改写器。结合对话历史，把用户当前问题改写成一个不依赖上下文、可独立理解的完整问题。
+规则：
+1. 只消除指代（如"那华南呢"→补全历史中的主语和指标），不改变原意；
+2. 不添加历史中不存在的信息；
+3. 只输出改写后的问题句，不要任何解释或引号。
+"""
+
+REWRITE_QUERY_USER_TPL = """
+【对话历史】
+{history}
+
+【当前问题】
+{question}
+
+请输出改写后的完整问题。
+"""
+
+# 滚动摘要Prompt：把旧对话轮次压缩成摘要
+MEMORY_SUMMARY_SYSTEM_PROMPT = """
+你是对话摘要器。把下面的对话轮次压缩成一段简短摘要。
+要求：保留关键事实（指标口径、筛选条件、重要结论），丢弃寒暄与过程细节，不超过100字，直接输出摘要文本。
+"""
+
+MEMORY_SUMMARY_USER_TPL = """
+【待摘要对话】
+{history}
+
+请输出摘要。
+"""
+
+# 长期记忆提炼Prompt：判断本轮是否暴露用户偏好
+MEMORY_EXTRACT_SYSTEM_PROMPT = """
+你是用户偏好提炼器。判断本轮对话是否暴露了值得长期记住的用户偏好或事实
+（如指标口径偏好、关注的维度、数据单位偏好、常用筛选条件）。
+只输出以下两种结果之一：
+1. 有偏好：输出一条陈述句事实（如"用户希望金额默认指实付金额"）
+2. 无偏好：输出 NONE
+不要输出其他任何内容。
+"""
+
+MEMORY_EXTRACT_USER_TPL = """
+【用户问题】{user_question}
+【助手回答】{answer}
+【执行SQL】{sql}
+请判断是否有值得记住的用户偏好。
+"""
+
+# 长短期记忆Prompt
+MEMORY_SUMMARY_SYSTEM_PROMPT = """
+你是对话历史摘要助手。
+你的任务：精简下面的数据库问答对话，保留关键信息：用户查询意图、查询的表、筛选条件、关键查询结果。
+不需要保存完整SQL，只保留业务含义。摘要简洁，不要冗余。
+"""
+
+MEMORY_SUMMARY_USER_TPL = """
+请对下面的对话历史生成简短摘要：
+{history}
+输出仅返回摘要文本，不要额外解释。
 """

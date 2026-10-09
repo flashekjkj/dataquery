@@ -4,23 +4,27 @@ from langgraph.checkpoint.memory import MemorySaver
 from agent.state import AskDataState
 from agent.nodes import build_nodes
 
-def build_graph(model_client,hybrid,executor,max_attempts:int = 3):
+def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3):
     """
     构建并编译LangGraph Text2SQL自修复Agent图
     :param model_client: LLM客户端实例
     :param hybrid: 混合检索器 HybridRetriever
     :param executor: SQL执行器 SQLExecutor
+    :param conv_memory: 短期会话记忆 ConversationMemory
+    :param long_term_memory: 长期用户偏好记忆 LongTermMemoryStore
     :param max_attempts: SQL最大重试次数
-    :return: compiled_graph: 编译完成的langgraph可执行图    
+    :return: compiled_graph: 编译完成的langgraph可执行图
     """
 
     # 1.实例化状态图
     graph_builder = StateGraph(AskDataState)
 
     # 2.闭包生成全部节点函数，注入外部依赖
-    node_map = build_nodes(model_client,hybrid,executor)
+    node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory)
 
     # 注册所有节点到图中
+    graph_builder.add_node("load_memory_node", node_map["load_memory_node"])
+    graph_builder.add_node("rewrite_node", node_map["rewrite_node"])
     graph_builder.add_node("route_node", node_map["route_node"])
     graph_builder.add_node("chat_node", node_map["chat_node"])
     graph_builder.add_node("retrieve_node", node_map["retrieve_node"])
@@ -28,8 +32,18 @@ def build_graph(model_client,hybrid,executor,max_attempts:int = 3):
     graph_builder.add_node("execute_node", node_map["execute_node"])
     graph_builder.add_node("repair_node", node_map["repair_node"])
     graph_builder.add_node("answer_node", node_map["answer_node"])
+    graph_builder.add_node("save_memory_node", node_map["save_memory_node"])
 
-    # ========== 路由判断函数 ==========   
+    # ========== 路由判断函数 ==========
+    def has_history_router(state:AskDataState) -> str:
+        """
+        记忆加载后的分支：
+        有会话历史 → rewrite_node做指代消解
+        无历史（首轮）→ 直接route_node，省一次LLM调用
+        """
+        context = (state.get("conversation_context") or "").strip()
+        return "rewrite_node" if context else "route_node"
+
     def route_router(state:AskDataState) -> str:
         """
         路由分支：根据state["route"]决定走闲聊还是数据查询
@@ -51,8 +65,21 @@ def build_graph(model_client,hybrid,executor,max_attempts:int = 3):
         return "answer_node"
 
     # ========== 构建边关系 ==========
-    # 入口
-    graph_builder.add_edge(START,"route_node")
+    # 入口：每轮先加载记忆（短期历史+长期偏好）
+    graph_builder.add_edge(START,"load_memory_node")
+
+    # 记忆加载后的条件分支：有历史走指代消解，无历史直接路由
+    graph_builder.add_conditional_edges(
+        "load_memory_node",
+        has_history_router,
+        {
+            "rewrite_node":"rewrite_node",
+            "route_node":"route_node"
+        }
+    )
+
+    # 指代消解后进入意图路由
+    graph_builder.add_edge("rewrite_node","route_node")
 
     # 路由节点的条件分支
     graph_builder.add_conditional_edges(
@@ -63,9 +90,6 @@ def build_graph(model_client,hybrid,executor,max_attempts:int = 3):
             "data":"retrieve_node"
         }
     )
-
-    # 闲聊直接结束
-    graph_builder.add_edge("chat_node",END)
 
     # 数据查询链路
     graph_builder.add_edge("retrieve_node","generate_sql_node")
@@ -84,8 +108,12 @@ def build_graph(model_client,hybrid,executor,max_attempts:int = 3):
     # 重试簿记节点 → 回到SQL生成节点，形成循环
     graph_builder.add_edge("repair_node","generate_sql_node")
 
-    # 最终回答节点结束
-    graph_builder.add_edge("answer_node",END)
+    # 闲聊/数据两路汇聚到记忆保存节点
+    graph_builder.add_edge("chat_node","save_memory_node")
+    graph_builder.add_edge("answer_node","save_memory_node")
+
+    # 记忆保存后结束
+    graph_builder.add_edge("save_memory_node",END)
 
     # 使用内存检查点，支持会话线程
     checkpointer = MemorySaver()

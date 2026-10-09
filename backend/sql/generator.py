@@ -87,15 +87,18 @@ def generate_sql(
         field_docs:List[Any],
         relations:List[str],
         value_samples:Dict[str,List[Any]],
-        model_client:ModelClient
+        model_client:ModelClient,
+        user_profile:str = ""
 ) -> str:
     """组prompt -> llm调用 -> extract_sql提取SQL"""
     field_text = _format_field_docs(field_docs)
     rel_text = _format_relations(relations)
     val_text = _format_value_samples(value_samples)
+    profile_text = user_profile or "无用户偏好"
 
     user_prompt = GENERATE_SQL_USER_TPL.format(
         question=question,
+        user_profile=profile_text,
         field_docs_text=field_text,
         relations_text=rel_text,
         value_samples_text=val_text
@@ -115,15 +118,18 @@ def generate_repair_sql(
         value_samples:Dict[str,List[Any]],
         old_sql:str,
         error_msg:Optional[str],
-        model_client:ModelClient
+        model_client:ModelClient,
+        user_profile:str = ""
 ) -> str:
     """组修复prompt -> llm调用 -> extract_sql提取修复后的SQL"""
     field_text = _format_field_docs(field_docs)
     rel_text = _format_relations(relations)
     val_text = _format_value_samples(value_samples)
+    profile_text = user_profile or "无用户偏好"
 
     user_prompt = REPAIR_SQL_USER_TPL.format(
         question=question,
+        user_profile=profile_text,
         field_docs_text=field_text,
         relations_text=rel_text,
         value_samples_text=val_text,
@@ -165,6 +171,7 @@ def generate_sql_with_repair(
 
             user_prompt = REPAIR_SQL_USER_TPL.format(
                 question=question,
+                user_profile="无用户偏好",
                 field_docs_text=field_text,
                 relations_text=rel_text,
                 value_samples_text=val_text,
