@@ -1,3 +1,10 @@
+from __future__ import annotations
+import sys
+from pathlib import Path
+
+BASE_BACKEND = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_BACKEND))
+
 from app.model_client import ModelClient
 from retrieval.service import build_hybrid_index
 

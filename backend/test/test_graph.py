@@ -59,8 +59,12 @@ class FakeClient:
         ]
         return RerankResponse(results=items)
 
+    def chat_with_tools(self, prompt, system_prompt=None, tools=None):
+        """固定返回calculator工具调用，用于工具链路测试（不依赖真实API）"""
+        return {"content": "", "tool_calls": [{"name": "calculator__calculate", "arguments": {"expression": "3856*0.85"}}]}
 
-def _build_graph(client, max_attempts: int = 3):
+
+def _build_graph(client, max_attempts: int = 3, mcp_manager=None):
     hybrid = build_hybrid_index(client)
     executor = SQLExecutor(str(DB_PATH))
     # 记忆存储在临时目录，测试互不干扰、不污染项目数据
@@ -69,7 +73,8 @@ def _build_graph(client, max_attempts: int = 3):
     return build_graph(
         client, hybrid, executor,
         conv_memory, long_term_memory,
-        max_attempts=max_attempts
+        max_attempts=max_attempts,
+        mcp_manager=mcp_manager
     )
 
 
@@ -85,9 +90,9 @@ def test_graph_structure():
     graph = _build_graph(FakeClient(["SELECT 1"]))
     node_names = set(graph.get_graph().nodes.keys()) - {"__start__", "__end__"}
     expected = {
-        "load_memory_node", "rewrite_node", "route_node", "chat_node",
+        "load_memory_node", "rewrite_node", "skill_node", "route_node", "chat_node",
         "retrieve_node", "generate_sql_node", "execute_node", "repair_node",
-        "answer_node", "save_memory_node",
+        "answer_node", "save_memory_node", "tool_plan_node", "tool_execute_node",
     }
     assert node_names == expected, f"节点集合不符：{node_names}"
     edges = {(e.source, e.target) for e in graph.get_graph().edges}
@@ -148,6 +153,23 @@ def test_chat_route():
     print("✅ test_chat_route 通过！闲聊直达回答")
 
 
+def test_tool_route_end_to_end():
+    """工具路由全链路：FakeClient规划calculator调用 → 真实MCP calculator server执行 → 回答"""
+    import sys as _sys
+    from mcp_client.manager import MCPToolManager
+    manager = MCPToolManager(servers=[{
+        "name": "calculator",
+        "command": _sys.executable,
+        "args": [str(BASE_BACKEND / "mcp_client" / "demo_servers" / "calculator_server.py")],
+    }])
+    graph = _build_graph(FakeClient([], route_answer="tool"), mcp_manager=manager)
+    state = _invoke(graph, "帮我算一下3856*0.85")
+    assert state["route"] == "tool"
+    assert "3277.6" in state["tool_result"], f"工具结果错误：{state['tool_result']}"
+    assert state["answer"] == "【测试回答】"
+    print("✅ test_tool_route_end_to_end 通过！工具规划→MCP执行→回答全链路")
+
+
 def test_ask_agent_thread_isolation():
     """两个不同会话（不同thread_id）：attempts_log互不残留"""
     from main import ask_data_agent
@@ -166,5 +188,6 @@ if __name__ == "__main__":
     test_repair_cycle()
     test_exhausted_attempts()
     test_chat_route()
+    test_tool_route_end_to_end()
     test_ask_agent_thread_isolation()
     print("\n🎉 全部LangGraph测试通过！")

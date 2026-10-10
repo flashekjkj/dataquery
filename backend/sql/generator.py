@@ -88,7 +88,8 @@ def generate_sql(
         relations:List[str],
         value_samples:Dict[str,List[Any]],
         model_client:ModelClient,
-        user_profile:str = ""
+        user_profile:str = "",
+        skill_instructions: str = ""
 ) -> str:
     """组prompt -> llm调用 -> extract_sql提取SQL"""
     field_text = _format_field_docs(field_docs)
@@ -104,9 +105,12 @@ def generate_sql(
         value_samples_text=val_text
     )
 
+    system_prompt=GENERATE_SQL_SYSTEM_PROMPT
+    if skill_instructions:
+        system_prompt = GENERATE_SQL_SYSTEM_PROMPT + f"\n\n【当前技能要求】\n{skill_instructions}"
     resp = model_client.llm_invoke(
         prompt=user_prompt,
-        system_prompt=GENERATE_SQL_SYSTEM_PROMPT
+        system_prompt=system_prompt
     )
     sql = extract_sql(resp.content)
     return sql
@@ -119,7 +123,8 @@ def generate_repair_sql(
         old_sql:str,
         error_msg:Optional[str],
         model_client:ModelClient,
-        user_profile:str = ""
+        user_profile:str = "",
+        skill_instructions: str = ""
 ) -> str:
     """组修复prompt -> llm调用 -> extract_sql提取修复后的SQL"""
     field_text = _format_field_docs(field_docs)
@@ -137,9 +142,13 @@ def generate_repair_sql(
         error_msg=error_msg
     )
 
+
+    system_prompt=REPAIR_SQL_SYSTEM_PROMPT
+    if skill_instructions:
+        system_prompt = REPAIR_SQL_SYSTEM_PROMPT + f"\n\n【当前技能要求】\n{skill_instructions}"
     resp = model_client.llm_invoke(
         prompt=user_prompt,
-        system_prompt=REPAIR_SQL_SYSTEM_PROMPT
+        system_prompt=system_prompt
     )
     return extract_sql(resp.content)
 

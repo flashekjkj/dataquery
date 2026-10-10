@@ -4,7 +4,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from agent.state import AskDataState
 from agent.nodes import build_nodes
 
-def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3):
+def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3, skill_registry=None, mcp_manager=None):
     """
     构建并编译LangGraph Text2SQL自修复Agent图
     :param model_client: LLM客户端实例
@@ -20,7 +20,7 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
     graph_builder = StateGraph(AskDataState)
 
     # 2.闭包生成全部节点函数，注入外部依赖
-    node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory)
+    node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory,skill_registry=skill_registry, mcp_manager=mcp_manager)
 
     # 注册所有节点到图中
     graph_builder.add_node("load_memory_node", node_map["load_memory_node"])
@@ -33,16 +33,21 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
     graph_builder.add_node("repair_node", node_map["repair_node"])
     graph_builder.add_node("answer_node", node_map["answer_node"])
     graph_builder.add_node("save_memory_node", node_map["save_memory_node"])
+    graph_builder.add_node("skill_node", node_map["skill_node"])
+    graph_builder.add_node("tool_plan_node", node_map["tool_plan_node"])
+    graph_builder.add_node("tool_execute_node", node_map["tool_execute_node"])
+
+
 
     # ========== 路由判断函数 ==========
     def has_history_router(state:AskDataState) -> str:
         """
         记忆加载后的分支：
         有会话历史 → rewrite_node做指代消解
-        无历史（首轮）→ 直接route_node，省一次LLM调用
+        无历史（首轮）→ 直接skill_node，省一次LLM调用
         """
         context = (state.get("conversation_context") or "").strip()
-        return "rewrite_node" if context else "route_node"
+        return "rewrite_node" if context else "skill_node"
 
     def route_router(state:AskDataState) -> str:
         """
@@ -64,6 +69,11 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
             return "repair_node"
         return "answer_node"
 
+    def has_tool_call_router(state:AskDataState) -> str:
+        """工具规划后的分支：选出了工具→执行；没选出→降级闲聊回答"""
+        return "tool_execute_node" if (state.get("tool_calls") or []) else "chat_node"
+
+
     # ========== 构建边关系 ==========
     # 入口：每轮先加载记忆（短期历史+长期偏好）
     graph_builder.add_edge(START,"load_memory_node")
@@ -74,22 +84,35 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         has_history_router,
         {
             "rewrite_node":"rewrite_node",
-            "route_node":"route_node"
+            "skill_node":"skill_node"
         }
     )
 
     # 指代消解后进入意图路由
-    graph_builder.add_edge("rewrite_node","route_node")
+    graph_builder.add_edge("rewrite_node","skill_node")
+    graph_builder.add_edge("skill_node","route_node")
 
-    # 路由节点的条件分支
+    # 路由节点的条件分支：闲聊/数据查询/外部工具三路
     graph_builder.add_conditional_edges(
         "route_node",
         route_router,
         {
             "chat":"chat_node",
-            "data":"retrieve_node"
+            "data":"retrieve_node",
+            "tool":"tool_plan_node"
         }
     )
+
+    # 工具链路：规划→（有工具调用）执行→回答；（无工具调用）降级闲聊
+    graph_builder.add_conditional_edges(
+        "tool_plan_node",
+        has_tool_call_router,
+        {
+            "tool_execute_node":"tool_execute_node",
+            "chat_node":"chat_node"
+        }
+    )
+    graph_builder.add_edge("tool_execute_node","answer_node")
 
     # 数据查询链路
     graph_builder.add_edge("retrieve_node","generate_sql_node")

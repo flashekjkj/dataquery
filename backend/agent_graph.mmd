@@ -15,6 +15,9 @@ graph TD;
 	repair_node(repair_node)
 	answer_node(answer_node)
 	save_memory_node(save_memory_node)
+	skill_node(skill_node)
+	tool_plan_node(tool_plan_node)
+	tool_execute_node(tool_execute_node)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> load_memory_node;
 	answer_node --> save_memory_node;
@@ -23,12 +26,17 @@ graph TD;
 	execute_node -.-> repair_node;
 	generate_sql_node --> execute_node;
 	load_memory_node -.-> rewrite_node;
-	load_memory_node -.-> route_node;
+	load_memory_node -.-> skill_node;
 	repair_node --> generate_sql_node;
 	retrieve_node --> generate_sql_node;
-	rewrite_node --> route_node;
+	rewrite_node --> skill_node;
 	route_node -. &nbsp;chat&nbsp; .-> chat_node;
 	route_node -. &nbsp;data&nbsp; .-> retrieve_node;
+	route_node -. &nbsp;tool&nbsp; .-> tool_plan_node;
+	skill_node --> route_node;
+	tool_execute_node --> answer_node;
+	tool_plan_node -.-> chat_node;
+	tool_plan_node -.-> tool_execute_node;
 	save_memory_node --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0

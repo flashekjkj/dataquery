@@ -1,0 +1,10 @@
+{
+  "name": "customer_profile",
+  "display_name": "客户画像",
+  "description": "客户基础信息与画像分析技能：限定客户与订单表，关注客户分层与区域分布",
+  "trigger_keywords": ["客户", "客户等级", "地区分布", "画像", "分层"],
+  "table_scope": ["customers", "orders"],
+  "system_instructions": "你是客户画像分析专家。分析时注意：1) 客户等级分为战略客户/重点客户/普通客户；2) 关注区域分布与等级交叉分析；3) 回答要区分客户数（去重）与订单数。",
+  "example_questions": ["各等级客户数量是多少", "华东地区客户的下单情况"],
+  "mcp_tools": []
+}

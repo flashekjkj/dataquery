@@ -5,6 +5,7 @@ from app.schemas import LLMResponse,EmbeddingResponse,RerankItem,RerankResponse
 
 from openai import OpenAI
 from app.config import settings
+import json
 
 class ModelClient:
     def __init__(self,mock:bool=True):
@@ -73,4 +74,39 @@ class ModelClient:
             return RerankResponse(results=rerank_items)
         else:
             raise NotImplementedError("真实Rerank接口尚未实现，请使用mock模式")
+
+    def chat_with_tools(self,prompt:str,system_prompt:Optional[str] = None,tools:Optional[List[dict]] = None) -> dict:
+        """
+        带工具调用的LLM入口（function calling）
+        返回 {"content": str, "tool_calls": [{"name": str, "arguments": dict}]}
+        mock模式：问题含"计算"时返回calculator工具调用，用于离线联调        
+        """
+        if self.mock:
+            tool_calls = []
+            if "计算" in prompt:
+                tool_calls.append({
+                    "name":"calculator__calculate",
+                    "arguments":{"expression":prompt.split("计算")[-1].strip()},
+                })
+            return {"content": "", "tool_calls": tool_calls}
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        resp = self._client.chat.completions.create(
+            model=settings.LLM_MODEL_ID,
+            messages=messages,
+            tools=tools or [],
+            tool_choice="auto"
+        )
+        msg = resp.choices[0].message
+        tool_calls = []
+        for tc in (msg.tool_calls or []):
+            try:
+                args = json.loads(tc.function.arguments)
+            except Exception:
+                args = {"expression": tc.function.arguments}
+            tool_calls.append({"name": tc.function.name, "arguments": args})
+        return {"content": msg.content or "", "tool_calls": tool_calls}            
 

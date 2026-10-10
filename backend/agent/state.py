@@ -50,3 +50,11 @@ class AskDataState(TypedDict):
 
     # 指代消解后的独立问题（rewrite_node写入，首轮为空）
     rewritten_question:Optional[str]
+
+    # 技能相关
+    forced_skill:Optional[str]  # 用户强制指定技能
+    active_skill:Optional[str]  # 本轮实际生效技能
+
+    # 工具调用相关
+    tool_calls:Optional[List[Dict[str,Any]]]   # 工具规划节点产出的调用列表
+    tool_result:Optional[str]                  # 工具执行结果文本    

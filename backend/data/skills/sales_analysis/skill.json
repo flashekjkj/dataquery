@@ -1,0 +1,10 @@
+{
+  "name": "sales_analysis",
+  "display_name": "销售分析",
+  "description": "针对销售额、订单、交易行为的分析技能：限定订单与客户表，金额口径默认实付金额",
+  "trigger_keywords": ["销售", "销售额", "业绩", "订单", "实付", "退款", "客单价"],
+  "table_scope": ["orders", "customers"],
+  "system_instructions": "你是销售数据分析专家。分析时注意：1) 金额默认指实付金额（paid_amount）；2) 关注趋势、区域对比、客户等级分布；3) 结论要给出数据依据。",
+  "example_questions": ["华东地区上月销售额多少", "各客户等级的订单金额分布", "退款订单占比是多少"],
+  "mcp_tools": ["calculate"]
+}

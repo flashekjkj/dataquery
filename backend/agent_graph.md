@@ -23,6 +23,9 @@ graph TD;
 	repair_node(repair_node)
 	answer_node(answer_node)
 	save_memory_node(save_memory_node)
+	skill_node(skill_node)
+	tool_plan_node(tool_plan_node)
+	tool_execute_node(tool_execute_node)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> load_memory_node;
 	answer_node --> save_memory_node;
@@ -31,12 +34,17 @@ graph TD;
 	execute_node -.-> repair_node;
 	generate_sql_node --> execute_node;
 	load_memory_node -.-> rewrite_node;
-	load_memory_node -.-> route_node;
+	load_memory_node -.-> skill_node;
 	repair_node --> generate_sql_node;
 	retrieve_node --> generate_sql_node;
-	rewrite_node --> route_node;
+	rewrite_node --> skill_node;
 	route_node -. &nbsp;chat&nbsp; .-> chat_node;
 	route_node -. &nbsp;data&nbsp; .-> retrieve_node;
+	route_node -. &nbsp;tool&nbsp; .-> tool_plan_node;
+	skill_node --> route_node;
+	tool_execute_node --> answer_node;
+	tool_plan_node -.-> chat_node;
+	tool_plan_node -.-> tool_execute_node;
 	save_memory_node --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
@@ -49,10 +57,13 @@ graph TD;
 |---|---|
 | `load_memory_node` | 加载短期会话历史 + 长期用户偏好 |
 | `rewrite_node` | 指代消解（有历史时走此节点，如"那华南呢？"→"华南地区销售额是多少？"） |
-| `route_node` | 意图路由：闲聊 / 数据查询 |
+| `skill_node` | 技能匹配：按问题激活领域技能（如销售分析），注入技能指令 |
+| `route_node` | 意图路由：闲聊 / 数据查询 / 外部工具三路 |
 | `chat_node` | 闲聊直接回答 |
+| `tool_plan_node` | 工具规划：LLM 决定是否调用 MCP 外部工具及参数 |
+| `tool_execute_node` | 执行 MCP 工具调用 |
 | `retrieve_node` | 混合检索 schema 字段 + 表关联 + 字段样例值 |
-| `generate_sql_node` | 生成 SQL（首次用生成模板，重试用修复模板，注入用户偏好） |
+| `generate_sql_node` | 生成 SQL（首次用生成模板，重试用修复模板，注入用户偏好与技能指令） |
 | `execute_node` | DuckDB 只读安全执行 |
 | `repair_node` | 重试簿记（attempts+1），环回生成节点——图中可见的自修复环 |
 | `answer_node` | 结果转自然语言（失败时诚实报错） |

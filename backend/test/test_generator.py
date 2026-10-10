@@ -1,4 +1,11 @@
 # test_generator.py
+from __future__ import annotations
+import sys
+from pathlib import Path
+
+BASE_BACKEND = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_BACKEND))
+
 from sql.generator import generate_sql_with_repair
 from sql.executor import SQLExecutor
 from app.model_client import ModelClient
