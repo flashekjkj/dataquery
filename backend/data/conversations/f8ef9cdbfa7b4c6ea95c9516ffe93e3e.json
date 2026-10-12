@@ -1,0 +1,19 @@
+{
+  "turns": [
+    {
+      "role": "user",
+      "content": "华东地区上月销售额是多少",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-12T08:26:42.329383"
+    },
+    {
+      "role": "assistant",
+      "content": "华东地区上月销售额为 **8,795,238.47元**。",
+      "sql": "SELECT SUM(paid_amount) AS sales_amount FROM orders WHERE region = '华东';",
+      "answer": "华东地区上月销售额为 **8,795,238.47元**。",
+      "timestamp": "2026-10-12T08:26:42.331381"
+    }
+  ],
+  "summary": ""
+}

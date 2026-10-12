@@ -1,0 +1,19 @@
+{
+  "turns": [
+    {
+      "role": "user",
+      "content": "华东地区销售额",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-12T08:29:33.433235"
+    },
+    {
+      "role": "assistant",
+      "content": "【Mock LLM】用户提问：华东地区销售额\n模拟SQL：SELECT * FROM customers LIMIT 10;",
+      "sql": null,
+      "answer": "【Mock LLM】用户提问：华东地区销售额\n模拟SQL：SELECT * FROM customers LIMIT 10;",
+      "timestamp": "2026-10-12T08:29:33.434476"
+    }
+  ],
+  "summary": ""
+}

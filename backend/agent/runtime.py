@@ -1,0 +1,86 @@
+from __future__ import annotations
+from pathlib import Path
+import sys
+from typing import Optional
+
+from agent.graph import build_graph
+from app.model_client import ModelClient
+from memory.conversation import ConversationMemory
+from memory.long_term import LongTermMemoryStore
+from retrieval.service import build_hybrid_index
+from sql.executor import SQLExecutor
+from skill.registry import SkillRegistry
+from mcp_client.manager import MCPToolManager
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "demo_ecom.duckdb"
+DATA_DIR = BASE_DIR / "data"
+
+
+def build_agent(max_attempts: int = 3):
+    """
+    构建Agent全链路：模型客户端 + 混合检索 + SQL执行器 + 两种记忆 + 技能注册表 + LangGraph图
+    返回 (graph, conv_memory,skill_registry)：图用于问答，conv_memory用于CLI展示会话历史
+    """
+    model_client = ModelClient(mock=False)
+    print("正在构建混合检索索引（对所有字段文档生成embedding）...")
+    hybrid = build_hybrid_index(model_client)
+    executor = SQLExecutor(str(DB_PATH))
+    conv_memory = ConversationMemory(data_root=DATA_DIR)
+    long_term_memory = LongTermMemoryStore(data_root=DATA_DIR)
+    skill_registry = SkillRegistry(DATA_DIR / "skills")
+    # MCP工具管理器：接入calculator演示server（第四步技能联动时按skill声明过滤工具）
+    mcp_manager = MCPToolManager(
+        servers=[
+            {
+                "name": "calculator",
+                "command": sys.executable,
+                "args": [str(BASE_DIR / "mcp_client" / "demo_servers" / "calculator_server.py")],
+            }
+        ]
+    )
+    graph = build_graph(
+        model_client, hybrid, executor,
+        conv_memory, long_term_memory,
+        max_attempts=max_attempts,
+        skill_registry=skill_registry,
+        mcp_manager=mcp_manager
+    )
+    return graph, conv_memory, skill_registry
+
+
+def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Optional[str] = None) -> dict:
+    """
+    LangGraph版Agent入口：一次invoke运行整张图
+    - thread_id必传：由会话层管理，同一会话内多轮共用，实现多轮记忆
+    - forced_skill：强制指定技能名（/skill命令），None=自动匹配
+    - 初始state必须带上attempts和attempts_log（attempts参与加法运算，
+      attempts_log每次显式传[]覆盖重置，防止跨轮累积）
+    """
+    final_state = graph.invoke({
+            "user_question": user_question, 
+            "attempts": 0, 
+            "attempts_log": [],
+            "forced_skill":forced_skill,
+        },
+        config={"configurable": {"thread_id": thread_id}},
+    )
+
+    route = final_state.get("route") or "data"
+    field_docs = final_state.get("field_docs") or []
+    attempts_log = final_state.get("attempts_log") or []
+
+    return {
+        "success": bool(final_state.get("success")) if route == "data" else True,
+        "route": route,
+        "user_question": user_question,
+        "rewritten_question": final_state.get("rewritten_question"),
+        "retrieved_docs": [doc.doc_id for doc in field_docs],
+        "final_sql": final_state.get("sql"),
+        "query_result": final_state.get("query_result"),
+        "answer": final_state.get("answer") or "",
+        "attempts": [{"sql": s, "error": e} for s, e in attempts_log],
+        "active_skill":final_state.get("active_skill"),
+        "tool_calls": [c["name"] for c in (final_state.get("tool_calls") or [])],
+        "tool_result": final_state.get("tool_result"),
+    }

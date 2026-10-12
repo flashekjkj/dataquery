@@ -85,6 +85,32 @@ class ConversationMemory:
                 lines.append(f"助手：{answer}{sql_part}")
         return "\n".join(lines)
 
+    def list_sessions(self) -> List[Dict[str,Any]]:
+        """
+        列出全部会话摘要，按最后更新时间倒序
+        返回[{"session_id","title","turn_count","created_at","updated_at","summary"}]
+        供前端会话列表使用
+        """
+        sessions = []
+        for fp in self.conv_dir.glob("*.json"):
+            data = self.load(fp.stem)
+            turns = data.get("turns") or []
+            if not turns:
+                continue
+            first_content = (turns[0].get("content") or "").strip()
+            title = first_content[:30] + "..." if len(first_content) > 30 else first_content
+            sessions.append({
+                "session_id":fp.stem,
+                "title":title,
+                "turn_count":len(turns),
+                "created_at":turns[0].get("timestamp"),
+                "updated_at":turns[-1].get("timestamp"),
+                "summary":data.get("summary") or "",
+            })
+
+        sessions.sort(key=lambda s:s.get("updated_at") or "",reverse=True)
+        return sessions
+
     def maybe_summarize(
             self,
             thread_id:str,
