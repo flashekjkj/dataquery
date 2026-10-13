@@ -1,5 +1,6 @@
 from __future__ import annotations
 import random
+import warnings
 from typing import List,Optional
 from app.schemas import LLMResponse,EmbeddingResponse,RerankItem,RerankResponse
 
@@ -15,6 +16,7 @@ class ModelClient:
         """
         self.mock = mock
         self._client = None
+        self._reranker = None   # 本地CrossEncoder精排模型，首次调用时懒加载
         if not self.mock:
             self._client = OpenAI(
                 api_key=settings.LLM_API_KEY,
@@ -64,16 +66,53 @@ class ModelClient:
                 vector=resp.data[0].embedding
             )
 
+    def _get_reranker(self):
+        """
+        懒加载本地CrossEncoder精排模型
+        torch/sentence-transformers的import和模型加载都很慢（数秒~十几秒），
+        所以延迟到首次真正rerank时才加载，不影响服务启动速度
+        """
+        if self._reranker is None:
+            from sentence_transformers import CrossEncoder
+            print(f"⏳ 首次加载本地rerank模型：{settings.RERANK_MODEL_ID} ...")
+            self._reranker = CrossEncoder(settings.RERANK_MODEL_ID, max_length=512)
+            print("✅ rerank模型加载完成")
+        return self._reranker
+
     def rerank(self,query:str,documents:List[str]) -> RerankResponse:
-        """搜索结果重排"""
+        """
+        搜索结果重排
+        真实模式：本地CrossEncoder（bge-reranker）对(query, doc)对做相关性打分，
+        index保持原输入列表位置（调用方靠index回映射原始文档）
+        加载/推理失败时降级为按原顺序返回，不阻塞检索主链路
+        """
         if self.mock:
             rerank_items = []
             for idx,doc in enumerate(documents):
                 score = 0.9 - idx * 0.05
                 rerank_items.append(RerankItem(index=idx,text=doc,score=score))
             return RerankResponse(results=rerank_items)
-        else:
-            raise NotImplementedError("真实Rerank接口尚未实现，请使用mock模式")
+
+        if not documents:
+            return RerankResponse(results=[])
+
+        try:
+            model = self._get_reranker()
+            pairs = [[query,doc] for doc in documents]
+            scores = model.predict(pairs)
+            rerank_items = [
+                RerankItem(index=i,text=doc,score=float(s))
+                for i,(doc,s) in enumerate(zip(documents,scores))
+            ]
+            # 按分数降序；index仍是原位置，排序只影响返回顺序
+            rerank_items.sort(key=lambda x: x.score,reverse=True)
+            return RerankResponse(results=rerank_items)
+        except Exception as e:
+            warnings.warn(f"本地rerank失败，降级为按原顺序返回：{e}")
+            return RerankResponse(results=[
+                RerankItem(index=i,text=doc,score=0.0)
+                for i,doc in enumerate(documents)
+            ])
 
     def chat_with_tools(self,prompt:str,system_prompt:Optional[str] = None,tools:Optional[List[dict]] = None) -> dict:
         """

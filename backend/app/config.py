@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     LLM_MODEL_ID:str
     LLM_TIMEOUT:int
     LLM_EMBEDDING_MODEL:str
+    # 本地rerank模型（可选，默认bge-reranker-base，需已下载到本地HF缓存）
+    RERANK_MODEL_ID:str = "BAAI/bge-reranker-base"
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,

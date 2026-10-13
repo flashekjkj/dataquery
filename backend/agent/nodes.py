@@ -76,7 +76,8 @@ def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional
     返回 (field_docs, relations, value_samples)
     """
     recall_k = TOP_K_SCHEMA * 2 if table_scope else TOP_K_SCHEMA
-    ranked = hybrid.retrieve(question,top_k=recall_k)
+    # use_rerank=True：RRF融合后交给本地CrossEncoder精排，提高schema命中精度
+    ranked = hybrid.retrieve(question,top_k=recall_k,use_rerank=True)
     if table_scope:
         ranked = [item for item in ranked if item[0].table_name in table_scope]
     field_docs = [doc for doc,_score in ranked[:TOP_K_SCHEMA]]
