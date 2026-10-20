@@ -1,17 +1,84 @@
 from __future__ import annotations
 from typing import List,Tuple,Dict
 import jieba
-from rank_bm25 import BM25Okapi
+import math
+#from rank_bm25 import BM25Okapi
 
 from retrieval.store import FieldDocument
 from app.model_client import ModelClient
+
+class MyBM25Okapi:
+    def __init__(self,corpus:List[List[str]],k1:float = 1.5,b:float = 0.75):
+        self.k1 = k1
+        self.b = b
+        self.corpus = corpus #分词后的语料
+        self.N = len(corpus) #文档总数
+
+        self.doc_len:List[int] = [] #每个文档的词语长度
+        self.avgdl:float = 0.0 #全部文档的平均长度
+        self.word_df:Dict[str,int] = {} #df：词在多少篇文档n_t
+        self.word_idf:Dict[str,float] = {} #预计每个词的IDF
+        self.doc_word_freq:List[Dict[str,int]] = [] #每个文档的内部词频
+
+        self._build()
+
+    def _build(self):
+        # 1.遍历所有文档，统计词频，文档长度
+        total_len = 0
+        for doc_words in self.corpus:
+            d_len = len(doc_words)
+            self.doc_len.append(d_len)
+            total_len += d_len
+
+            # 单文档词频统计
+            freq = {}
+            for w in doc_words:
+                freq[w] = freq.get(w,0) + 1 
+            self.doc_word_freq.append(freq)
+
+            # 统计df:词在多少不同的文档出现（一篇文档重复出现多次只算一次）
+            unique_words = set(doc_words)
+            for w in unique_words:
+                self.word_df[w] = self.word_df.get(w,0) + 1
+
+        # 平均文档长度
+        if self.N > 0:
+            self.avgdl = total_len / self.N
+
+        # 2. 预计算所有词的IDF
+        for word,nt in self.word_df.items():
+            idf = math.log( ((self.N - nt + 0.5) / (nt + 0.5)) + 1)
+            self.word_idf[word] = idf
+
+    def get_scores(self,query_words:List[str]) -> List[float]:
+        """输入分词后的query，返回所有文档的bm25分数列表"""
+        scores = []
+        for doc_idx in range(self.N):
+            score = 0.0
+            d_len = self.doc_len[doc_idx]
+            doc_freq = self.doc_word_freq[doc_idx]
+
+            for q_word in query_words:
+                if q_word not in self.word_idf:
+                    continue
+                idf = self.word_idf[q_word]
+                f_td = doc_freq.get(q_word,0)
+
+                numerator = f_td * (self.k1 + 1)
+                denominator = f_td + self.k1 * (1-self.b+self.b*d_len/self.avgdl)
+                score += idf * numerator / denominator
+
+            scores.append(score)
+
+        return scores
+
 
 class BM25Index:
     """BM25稀疏索引检索"""
     def __init__(self):
         self.docs:List[FieldDocument] = []
         self.tokenized_corpus:List[List[str]] = []
-        self.bm25:BM25Okapi | None = None
+        self.bm25:MyBM25Okapi | None = None
         self._built = False
 
     def build(self,documents:List[FieldDocument]):
@@ -19,7 +86,7 @@ class BM25Index:
         self.docs = documents
         # 中文分词
         self.tokenized_corpus = [jieba.lcut(doc.keyword_text) for doc in self.docs]
-        self.bm25 = BM25Okapi(self.tokenized_corpus)
+        self.bm25 = MyBM25Okapi(self.tokenized_corpus)
         self._built = True
 
     def retrieve(self,query:str,top_k:int = 3) -> List[Tuple[FieldDocument,float]]:
@@ -104,7 +171,7 @@ class HybridRetriever:
             top_k:int = 3,
             recall_top_k:int = 5,
             use_rerank:bool = False,
-            rerank_candidate_num:int = 8   
+            rerank_candidate_num:int = 8
         ) -> List[Tuple[FieldDocument,float]]:
         """
         :param query: 用户自然语言查询

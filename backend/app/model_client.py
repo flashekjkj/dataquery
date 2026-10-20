@@ -73,6 +73,8 @@ class ModelClient:
         所以延迟到首次真正rerank时才加载，不影响服务启动速度
         """
         if self._reranker is None:
+            import os
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
             from sentence_transformers import CrossEncoder
             print(f"⏳ 首次加载本地rerank模型：{settings.RERANK_MODEL_ID} ...")
             self._reranker = CrossEncoder(settings.RERANK_MODEL_ID, max_length=512)

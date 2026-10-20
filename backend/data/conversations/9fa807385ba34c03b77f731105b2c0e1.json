@@ -1,0 +1,33 @@
+{
+  "turns": [
+    {
+      "role": "user",
+      "content": "华东地区上月销售额是多少",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-14T01:14:25.165238"
+    },
+    {
+      "role": "assistant",
+      "content": "华东地区上月销售额为 **8,795,238.47 元**。",
+      "sql": "SELECT COALESCE(SUM(paid_amount), 0) AS sales_amount FROM orders WHERE region = '华东';",
+      "answer": "华东地区上月销售额为 **8,795,238.47 元**。",
+      "timestamp": "2026-10-14T01:14:25.166243"
+    },
+    {
+      "role": "user",
+      "content": "各客户等级订单数分别是多少",
+      "sql": null,
+      "answer": null,
+      "timestamp": "2026-10-14T01:14:58.690861"
+    },
+    {
+      "role": "assistant",
+      "content": "各客户等级订单数分别为：战略客户186单，重点客户139单，普通客户275单。",
+      "sql": "SELECT c.customer_level AS \"客户等级\", COUNT(o.customer_id) AS \"订单数\" FROM customers AS c LEFT JOIN orders AS o ON c.customer_id = o.customer_id GROUP BY c.customer_level ORDER BY CASE c.customer_level WHEN '战略客户' THEN 1 WHEN '重点客户' THEN 2 WHEN '普通客户' THEN 3 END;",
+      "answer": "各客户等级订单数分别为：战略客户186单，重点客户139单，普通客户275单。",
+      "timestamp": "2026-10-14T01:14:58.696600"
+    }
+  ],
+  "summary": ""
+}
