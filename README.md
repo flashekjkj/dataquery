@@ -108,6 +108,8 @@ askdata/
 
 ## 🚀 快速开始
 
+Docker 部署步骤、F 盘存储配置和日常管理命令见 [DOCKER.md](DOCKER.md)。
+
 ### 环境要求
 
 - Python 3.11（conda 环境 `askdata`）

@@ -1,0 +1,65 @@
+name: askdata
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      HF_HOME: /models/huggingface
+      HF_HUB_OFFLINE: "1"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    volumes:
+      - type: bind
+        source: ${ASKDATA_STORAGE_ROOT:-./.docker-data}/data/demo_ecom.duckdb
+        target: /app/data/demo_ecom.duckdb
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ASKDATA_STORAGE_ROOT:-./.docker-data}/data/conversations
+        target: /app/data/conversations
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ASKDATA_STORAGE_ROOT:-./.docker-data}/data/user_memory.json
+        target: /app/data/user_memory.json
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ASKDATA_STORAGE_ROOT:-./.docker-data}/models/huggingface
+        target: /models/huggingface
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      start_period: 180s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "127.0.0.1:${ASKDATA_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"

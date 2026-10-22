@@ -1,0 +1,12 @@
+# Direct runtime dependencies, aligned with the existing askdata environment.
+# torch is installed separately from the official CPU wheel index.
+# The Windows-only pywin32 and unused FlagEmbedding stack are excluded.
+fastapi==0.143.0
+uvicorn==0.54.0
+langgraph==1.2.14
+openai==3.24.0
+mcp==2.3.0
+pydantic-settings==2.15.0
+duckdb==1.5.6
+jieba==0.42.1
+sentence-transformers==6.1.0

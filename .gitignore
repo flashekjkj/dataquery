@@ -4,3 +4,5 @@ __pycache__/
 DEV_LOG.md
 COMMAND.md
 test.py
+.env.docker
+.docker-data/
