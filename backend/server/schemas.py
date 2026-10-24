@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Any,List,Optional
+from typing import Any,List,Optional,Literal
 
 from pydantic import BaseModel,Field
+from agent.contracts import TaskPlan, QueryTaskResult
 
 
 class ChatRequest(BaseModel):
@@ -9,6 +10,7 @@ class ChatRequest(BaseModel):
     question:str = Field(...,min_length=1,max_length=2000)
     session_id:Optional[str] = None
     forced_skill:Optional[str] = None
+    execution_mode: Literal["auto", "single", "multi"] = "auto"
 
 class AttemptRecord(BaseModel):
     """SQL自修复单轮尝试记录"""
@@ -37,6 +39,9 @@ class ChatResponse(BaseModel):
     active_skill:Optional[str] = None
     tool_calls:List[str]
     tool_result:Optional[str] = None
+    collaboration_status: str = "single"
+    task_plan: Optional[TaskPlan] = None
+    task_results: List[QueryTaskResult] = Field(default_factory=list)
 
 class SkillInfo(BaseModel):
     """GET /api/skills 单条技能信息"""

@@ -49,7 +49,15 @@ def build_agent(max_attempts: int = 3):
     return graph, conv_memory, skill_registry
 
 
-def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Optional[str] = None) -> dict:
+def initial_agent_state(question, forced_skill=None, execution_mode="auto"):
+    if execution_mode not in ("auto", "single", "multi"):
+        raise ValueError("execution_mode 必须是 auto/single/multi")
+    return {"user_question": question, "attempts": 0, "attempts_log": [],
+            "forced_skill": forced_skill, "execution_mode": execution_mode}
+
+
+def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Optional[str] = None,
+                   execution_mode: str = "auto") -> dict:
     """
     LangGraph版Agent入口：一次invoke运行整张图
     - thread_id必传：由会话层管理，同一会话内多轮共用，实现多轮记忆
@@ -57,13 +65,8 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
     - 初始state必须带上attempts和attempts_log（attempts参与加法运算，
       attempts_log每次显式传[]覆盖重置，防止跨轮累积）
     """
-    final_state = graph.invoke({
-            "user_question": user_question, 
-            "attempts": 0, 
-            "attempts_log": [],
-            "forced_skill":forced_skill,
-        },
-        config={"configurable": {"thread_id": thread_id}},
+    final_state = graph.invoke(initial_agent_state(user_question, forced_skill, execution_mode),
+        config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64},
     )
 
     route = final_state.get("route") or "data"
@@ -83,4 +86,7 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
         "active_skill":final_state.get("active_skill"),
         "tool_calls": [c["name"] for c in (final_state.get("tool_calls") or [])],
         "tool_result": final_state.get("tool_result"),
+        "collaboration_status": final_state.get("collaboration_status", "single"),
+        "task_plan": final_state.get("task_plan"),
+        "task_results": final_state.get("task_results") or [],
     }

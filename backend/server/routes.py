@@ -6,7 +6,7 @@ from typing import List
 from fastapi import APIRouter,HTTPException,Request
 from fastapi.responses import StreamingResponse
 
-from agent.runtime import ask_data_agent
+from agent.runtime import ask_data_agent, initial_agent_state
 from server.schemas import (
     ChatRequest,ChatResponse,HealthResponse,
     SessionDetail,SessionSummary,SkillInfo
@@ -32,6 +32,7 @@ def chat(req:ChatRequest,request:Request):
             req.question,
             session_id,
             forced_skill=req.forced_skill,
+            execution_mode=req.execution_mode,
         )
     except Exception as e:
         raise HTTPException(status_code=500,detail=f"Agent执行失败：{e}")
@@ -77,13 +78,8 @@ async def chat_stream(req:ChatRequest,request:Request):
     graph = request.app.state.graph
 
     async def event_generator():
-        initial_state = {
-            "user_question": req.question,
-            "attempts": 0,
-            "attempts_log": [],
-            "forced_skill": req.forced_skill,
-        }
-        config = {"configurable": {"thread_id": session_id}}
+        initial_state = initial_agent_state(req.question, req.forced_skill, req.execution_mode)
+        config = {"configurable": {"thread_id": session_id}, "recursion_limit": 64}
         try:
             # updates模式：每完成一个节点，yield一次该节点的状态增量
             async for update in graph.astream(initial_state,config=config,stream_mode="updates"):
@@ -93,7 +89,9 @@ async def chat_stream(req:ChatRequest,request:Request):
                         continue
                     event = {"type":"node","node":node_name}
                     # 只挑前端关心的字段
-                    for key in ("rewritten_question","sql","answer","success","route","active_skill"):
+                    for key in ("rewritten_question","sql","answer","success","route","active_skill",
+                                "collaboration_status", "task_plan", "task_results",
+                                "current_task_result", "task_index", "review_round"):
                         if key in node_output:
                             event[key] = node_output[key]
                     if "field_docs" in node_output:

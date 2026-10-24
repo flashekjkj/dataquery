@@ -1,5 +1,8 @@
 # AskData —— 自然语言数据查询 Agent
 
+新增：支持协调 Agent、查询 Agent 和审核 Agent 的有界串行协作，保留单智能体快速路径。
+前端可选择执行模式并查看任务 SQL、结果和审核记录。架构、使用方式与验证命令见 [MULTI_AGENT.md](MULTI_AGENT.md)。
+
 一个基于 LangGraph 的 Text2SQL 数据问答系统：用户用自然语言提问（如"华东地区上月销售额多少"），Agent 自动完成 **Schema 检索 → SQL 生成 → 只读执行 → 失败自修复 → 自然语言回答** 的全链路，并支持多轮对话记忆、技能系统与 MCP 工具生态。
 
 > 项目动机：面向 Agent 岗位的工程实践项目，覆盖 Schema Linking、混合检索、Text2SQL 自修复、LangGraph 状态机、上下文工程、Skill、MCP 协议等 Agent 核心技术栈。

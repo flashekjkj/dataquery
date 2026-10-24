@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph,START,END
 from langgraph.checkpoint.memory import MemorySaver
 from agent.state import AskDataState
 from agent.nodes import build_nodes
+from agent.supervisor import build_collaboration_nodes
 
 def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3, skill_registry=None, mcp_manager=None):
     """
@@ -21,6 +22,9 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
 
     # 2.闭包生成全部节点函数，注入外部依赖
     node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory,skill_registry=skill_registry, mcp_manager=mcp_manager)
+    collaboration_nodes = build_collaboration_nodes(model_client, node_map, max_attempts, skill_registry)
+    for name, node in collaboration_nodes.items():
+        graph_builder.add_node(name, node)
 
     # 注册所有节点到图中
     graph_builder.add_node("load_memory_node", node_map["load_memory_node"])
@@ -98,10 +102,31 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         route_router,
         {
             "chat":"chat_node",
-            "data":"retrieve_node",
+            "data":"supervisor_node",
             "tool":"tool_plan_node"
         }
     )
+
+    graph_builder.add_conditional_edges(
+        "supervisor_node",
+        lambda s: "query" if s["collaboration_status"] == "running" else
+                  "single" if s["collaboration_status"] == "single" else "stop",
+        {"query": "query_agent_node", "single": "retrieve_node", "stop": "save_memory_node"},
+    )
+    graph_builder.add_edge("query_agent_node", "review_agent_node")
+    graph_builder.add_conditional_edges(
+        "review_agent_node",
+        lambda s: "revise" if s["current_task_result"]["status"] == "revise" else "collect",
+        {"revise": "revise_task_node", "collect": "collect_task_node"},
+    )
+    graph_builder.add_edge("revise_task_node", "query_agent_node")
+    graph_builder.add_conditional_edges(
+        "collect_task_node",
+        lambda s: "next" if s["collaboration_status"] != "clarification" and
+                  s["task_index"] < len(s["task_plan"]["tasks"]) else "answer",
+        {"next": "query_agent_node", "answer": "supervisor_answer_node"},
+    )
+    graph_builder.add_edge("supervisor_answer_node", "save_memory_node")
 
     # 工具链路：规划→（有工具调用）执行→回答；（无工具调用）降级闲聊
     graph_builder.add_conditional_edges(

@@ -57,4 +57,13 @@ class AskDataState(TypedDict):
 
     # 工具调用相关
     tool_calls:Optional[List[Dict[str,Any]]]   # 工具规划节点产出的调用列表
-    tool_result:Optional[str]                  # 工具执行结果文本    
+    tool_result:Optional[str]                  # 工具执行结果文本
+
+    execution_mode: str
+    collaboration_status: str
+    task_plan: Optional[Dict[str, Any]]
+    task_results: List[Dict[str, Any]]
+    task_index: int
+    review_round: int
+    review_feedback: List[str]
+    current_task_result: Optional[Dict[str, Any]]

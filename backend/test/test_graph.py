@@ -93,6 +93,8 @@ def test_graph_structure():
         "load_memory_node", "rewrite_node", "skill_node", "route_node", "chat_node",
         "retrieve_node", "generate_sql_node", "execute_node", "repair_node",
         "answer_node", "save_memory_node", "tool_plan_node", "tool_execute_node",
+        "supervisor_node", "query_agent_node", "review_agent_node", "collect_task_node",
+        "revise_task_node", "supervisor_answer_node",
     }
     assert node_names == expected, f"节点集合不符：{node_names}"
     edges = {(e.source, e.target) for e in graph.get_graph().edges}

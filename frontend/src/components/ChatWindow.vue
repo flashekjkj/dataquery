@@ -7,10 +7,11 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   skills: { type: Array, default: () => [] },
   forcedSkill: { type: String, default: '' },
+  executionMode: { type: String, default: 'auto' },
 })
 
 // 子组件不直接改父组件状态，而是向上emit事件（Vue单向数据流核心）
-const emit = defineEmits(['send', 'update:forcedSkill'])
+const emit = defineEmits(['send', 'update:forcedSkill', 'update:executionMode'])
 
 const input = ref('')
 const scrollArea = ref(null)
@@ -40,6 +41,12 @@ watch(() => props.messages.length, async () => {
     </div>
 
     <div class="input-bar">
+      <select aria-label="协作模式" :value="executionMode" :disabled="loading"
+              @change="e => emit('update:executionMode', e.target.value)">
+        <option value="auto">自动选择协作模式</option>
+        <option value="single">单智能体</option>
+        <option value="multi">多智能体协作</option>
+      </select>
       <select :value="forcedSkill" @change="e => emit('update:forcedSkill', e.target.value)">
         <option value="">🤖 自动匹配技能</option>
         <option v-for="s in skills" :key="s.name" :value="s.name">
@@ -56,7 +63,7 @@ watch(() => props.messages.length, async () => {
 .chat-window { display: flex; flex-direction: column; height: 100%; }
 .messages { flex: 1; overflow-y: auto; padding: 16px; }
 .empty { color: #9ca3af; text-align: center; margin-top: 40px; }
-.input-bar { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e7eb; }
+.input-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e7eb; }
 .input-bar input { flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
 .input-bar button { padding: 10px 20px; background: #2563eb; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
 .input-bar button:disabled { background: #93c5fd; cursor: not-allowed; }

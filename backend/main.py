@@ -11,9 +11,11 @@ def main() -> None:
     thread_id = uuid.uuid4().hex
     # 技能锁定：/skill命令写入，None=自动匹配
     forced_skill: Optional[str] = None
+    execution_mode = "auto"
 
     print("==== AskData 数据问答Agent（LangGraph + 记忆版）====")
     print("输入问题提问；命令：/new 新会话，/history 查看历史，/exit 退出 /skills /skill 技能\n")
+    print("协作模式：/mode auto（默认）| single | multi\n")
 
     while True:
         try:
@@ -26,6 +28,15 @@ def main() -> None:
             print("👋 退出程序")
             break
         if not user_input:
+            continue
+        if user_input.startswith("/mode"):
+            parts = user_input.split(maxsplit=1)
+            mode = parts[1].strip() if len(parts) > 1 else ""
+            if mode in ("auto", "single", "multi"):
+                execution_mode = mode
+                print(f"当前协作模式：{execution_mode}\n")
+            else:
+                print("用法：/mode auto|single|multi\n")
             continue
         if user_input == "/new":
             thread_id = uuid.uuid4().hex
@@ -57,13 +68,21 @@ def main() -> None:
             continue
 
         try:
-            output = ask_data_agent(graph, user_input, thread_id, forced_skill=forced_skill)
+            output = ask_data_agent(graph, user_input, thread_id, forced_skill=forced_skill,
+                                    execution_mode=execution_mode)
         except Exception as e:
             print(f"\n❌ 系统异常：{e}")
             print("-" * 60)
             continue
 
         print(f"\n🤖 Agent回答：{output['answer']}")
+        if output["collaboration_status"] != "single":
+            print(f"[协作] {output['collaboration_status']}")
+            for task in output["task_results"]:
+                print(f"[{task['task_id']}] {task['status']}：{task['question']}")
+                print(f"  SQL：{task['sql']}")
+                if task.get("error"):
+                    print(f"  错误：{task['error']}")
         if output["route"] == "data":
             if output["rewritten_question"] and output["rewritten_question"] != user_input:
                 print(f"[DEBUG] 指代消解：{user_input} → {output['rewritten_question']}")

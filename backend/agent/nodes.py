@@ -242,6 +242,14 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
         conversation_context = conv_memory.recent_context(thread_id, n=4)
         user_profile = long_term_memory.load("default")
         return {
+            # 每轮重置产物；Checkpoint 不能把上一轮 SQL/工具结果带入本轮。
+            "rewritten_question": None, "sql": None, "query_result": None,
+            "success": False, "answer": "", "last_error": None,
+            "field_docs": [], "relations": [], "value_samples": {},
+            "tool_calls": [], "tool_result": None, "attempts": 0, "attempts_log": [],
+            "task_plan": None, "task_results": [], "task_index": 0,
+            "review_round": 0, "review_feedback": [], "current_task_result": None,
+            "collaboration_status": "single",
             "conversation_context": conversation_context,
             "user_profile": user_profile
         }
@@ -411,7 +419,10 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                 "role": "assistant",
                 "content": answer,
                 "sql": sql,
-                "answer": answer
+                "answer": answer,
+                "collaboration_status": state.get("collaboration_status", "single"),
+                "task_plan": state.get("task_plan"),
+                "task_results": state.get("task_results", []),
             })
         except Exception:
             pass

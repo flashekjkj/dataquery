@@ -10,6 +10,7 @@ const messages = ref([])
 const loading = ref(false)
 const skills = ref([])
 const forcedSkill = ref('')
+const executionMode = ref('auto')
 
 async function refreshSessions() {
   sessions.value = await listSessions()
@@ -28,6 +29,9 @@ async function openSession(id) {
     role: t.role,
     content: t.role === 'assistant' ? (t.answer || t.content || '') : (t.content || ''),
     sql: t.sql || null,
+    collaborationStatus: t.collaboration_status,
+    taskPlan: t.task_plan,
+    taskResults: t.task_results || [],
   }))
 }
 
@@ -45,7 +49,7 @@ async function send(question) {
   messages.value.push({ role: 'user', content: question })
   loading.value = true
   try {
-    const r = await chat(question, currentSessionId.value, forcedSkill.value || null)
+    const r = await chat(question, currentSessionId.value, forcedSkill.value || null, executionMode.value)
     currentSessionId.value = r.session_id
     messages.value.push({
       role: 'assistant',
@@ -57,6 +61,9 @@ async function send(question) {
       activeSkill: r.active_skill,
       rewrittenQuestion: r.rewritten_question,
       route: r.route,
+      collaborationStatus: r.collaboration_status,
+      taskPlan: r.task_plan,
+      taskResults: r.task_results,
     })
     refreshSessions()
   } catch (e) {
@@ -90,8 +97,10 @@ onMounted(() => {
         :loading="loading"
         :skills="skills"
         :forced-skill="forcedSkill"
+        :execution-mode="executionMode"
         @send="send"
         @update:forced-skill="v => (forcedSkill = v)"
+        @update:execution-mode="v => (executionMode = v)"
       />
     </main>
   </div>
