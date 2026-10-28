@@ -40,7 +40,7 @@ class MemoryFakeClient(FakeClient):
         self.summary_calls = 0
         self.generate_prompts = []
 
-    def llm_invoke(self, prompt, system_prompt=None):
+    def llm_invoke(self, prompt, system_prompt=None, **kwargs):
         if system_prompt == REWRITE_QUERY_SYSTEM_PROMPT:
             self.rewrite_calls += 1
             content = self.rewrite_answer if self.rewrite_answer is not None else "默认改写问题"

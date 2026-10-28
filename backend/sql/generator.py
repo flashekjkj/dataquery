@@ -1,8 +1,11 @@
 from __future__ import annotations
+import json
 import re
 from typing import List,Dict,Any,Optional
 from pydantic import BaseModel
+from app.config import settings
 from app.model_client import ModelClient
+from observability import logger
 from .executor import SQLExecutor,SqlExecuteError,QueryResult
 from .sql_prompts import (
     GENERATE_SQL_SYSTEM_PROMPT,
@@ -23,7 +26,7 @@ class SqlGenerateResult(BaseModel):
 
 def extract_sql(text:str) -> str:
     """
-    从LLM返回文本提取可执行SQL
+    从LLM返回文本提取可执行SQL（结构化输出不可用时的兜底解析）
     支持：```sql围栏、混杂解释文字、无分号、大小写SELECT、mock格式"模拟SQL:xxx"
     """
 
@@ -49,6 +52,38 @@ def extract_sql(text:str) -> str:
         return _normalize_sql(sql)
 
     return ""
+
+
+def parse_sql_response(text: str) -> str:
+    """
+    LLM 返回内容 → 可执行 SQL（解析策略：结构化优先，正则兜底）。
+
+    首选按 JSON 对象 {"sql": "..."} 解析（配合 response_format=json_object）；
+    模型未遵循 JSON 协议时逐级降级：代码围栏包裹的 JSON → 纯文本 SQL 提取。
+    解析失败返回空串，由上游进入自修复/失败路径。
+    """
+    if not text:
+        return ""
+
+    # 1. 尝试直接 JSON 解析（允许外层被 ```json / ``` 围栏包裹）
+    candidate = text.strip()
+    fenced = re.search(r"```(?:json)?\s*\n?(.*?)```", candidate, re.DOTALL | re.IGNORECASE)
+    if fenced:
+        candidate = fenced.group(1).strip()
+    try:
+        parsed = json.loads(candidate)
+        if isinstance(parsed, dict):
+            sql = (parsed.get("sql") or "").strip()
+            if sql:
+                return _normalize_sql(sql)
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    # 2. 兜底：正则从纯文本提取 SQL
+    sql = extract_sql(text)
+    if not sql:
+        logger.warning("SQL解析失败，模型返回内容前120字符：{}", (text or "")[:120])
+    return sql
 
 def _normalize_sql(sql:str) -> str:
     """SQL标准化，清理换行空格，补末尾分号"""
@@ -110,10 +145,11 @@ def generate_sql(
         system_prompt = GENERATE_SQL_SYSTEM_PROMPT + f"\n\n【当前技能要求】\n{skill_instructions}"
     resp = model_client.llm_invoke(
         prompt=user_prompt,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
+        operation="generate_sql",
+        json_mode=settings.LLM_JSON_MODE,
     )
-    sql = extract_sql(resp.content)
-    return sql
+    return parse_sql_response(resp.content)
 
 def generate_repair_sql(
         question:str,
@@ -148,9 +184,11 @@ def generate_repair_sql(
         system_prompt = REPAIR_SQL_SYSTEM_PROMPT + f"\n\n【当前技能要求】\n{skill_instructions}"
     resp = model_client.llm_invoke(
         prompt=user_prompt,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
+        operation="repair_sql",
+        json_mode=settings.LLM_JSON_MODE,
     )
-    return extract_sql(resp.content)
+    return parse_sql_response(resp.content)
 
 def generate_sql_with_repair(
         question:str,
@@ -189,9 +227,11 @@ def generate_sql_with_repair(
             )
             resp = model_client.llm_invoke(
                 prompt=user_prompt,
-                system_prompt=REPAIR_SQL_SYSTEM_PROMPT
+                system_prompt=REPAIR_SQL_SYSTEM_PROMPT,
+                operation="repair_sql",
+                json_mode=settings.LLM_JSON_MODE,
             )
-            sql=extract_sql(resp.content)
+            sql=parse_sql_response(resp.content)
 
         if not sql:
             attempts.append(AttemptRecord(sql=sql,error="extract_sql未能提取到SQL"))

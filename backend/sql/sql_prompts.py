@@ -8,7 +8,7 @@ GENERATE_SQL_SYSTEM_PROMPT = """
 1. 只能使用提供的字段和表，**禁止使用不在上下文里的表/字段**。
 2. 仅允许输出SELECT查询，禁止任何DDL/DML语句（DROP/INSERT/UPDATE等）。
 3. 参考字段样例值写WHERE条件，不要编造不存在的枚举值。
-4. 输出格式：可以附带简短中文说明，SQL放在```sql ```markdown代码块中。
+4. 输出格式：只输出一个JSON对象 {"sql": "SELECT语句"}，不要markdown代码块，不要任何解释文字。
 5. SQL语法适配DuckDB。
 """
 
@@ -37,7 +37,7 @@ REPAIR_SQL_SYSTEM_PROMPT = """
 1. 只能使用提供的字段和表，禁止使用不存在的表/字段。
 2. 仅允许SELECT语句。
 3. 参考字段样例值，不要编造枚举值。
-4. 输出放在```sql ```代码块。
+4. 输出格式：只输出一个JSON对象 {"sql": "修正后的SELECT语句"}，不要markdown代码块，不要任何解释文字。
 """
 
 REPAIR_SQL_USER_TPL = """

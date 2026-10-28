@@ -27,6 +27,8 @@ class QueryResultOut(BaseModel):
 class ChatResponse(BaseModel):
     """POST /api/chat 响应体：ask_data_agent返回的dict + session_id"""
     session_id:str
+    # 本次执行的 trace_id（与 request_id 同源），用于按 trace 文件/日志排查
+    trace_id:Optional[str] = None
     success:bool
     route:str
     user_question:str

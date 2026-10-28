@@ -43,7 +43,7 @@ class TeamClient(FakeClient):
         self.query_prompts = []
         self.fail_review = False
 
-    def llm_invoke(self, prompt, system_prompt=None):
+    def llm_invoke(self, prompt, system_prompt=None, **kwargs):
         if system_prompt == PLAN_PROMPT:
             self.plan_calls += 1
             return LLMResponse(content=self.plan if isinstance(self.plan, str) else json.dumps(self.plan), usage={})
@@ -167,10 +167,10 @@ class CollaborationTests(unittest.TestCase):
         client = TeamClient()
         original = client.llm_invoke
 
-        def invoke(prompt, system_prompt=None):
+        def invoke(prompt, system_prompt=None, **kwargs):
             if system_prompt == SUMMARY_PROMPT:
                 raise RuntimeError("summary service unavailable")
-            return original(prompt, system_prompt)
+            return original(prompt, system_prompt, **kwargs)
 
         client.llm_invoke = invoke
         result = self.ask(client)

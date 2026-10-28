@@ -31,6 +31,10 @@ class AskDataState(TypedDict):
     # 最近一次SQL报错信息
     last_error:Optional[str]
 
+    # LLM 调用故障标记（重试耗尽后的 LLMCallError 摘要）：
+    # 置位后执行路由直接终止修复循环（修复同样依赖 LLM，重试无意义）
+    llm_error:Optional[str]
+
     # 已重试次数
     attempts:int
 

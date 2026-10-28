@@ -19,6 +19,8 @@
 - **Skill 技能系统**：可插拔技能（销售分析/客户画像），限定检索范围、注入专属指令，可与 MCP 工具联动
 - **MCP 双角色**：既可作为 MCP Client 调用外部工具（calculator 演示 server），也可作为 MCP Server 对外暴露查库能力（list_tables / describe_table / query_database）
 - **安全执行**：DuckDB 只读连接、DDL/DML 危险语句拦截、强制 LIMIT、采样值辅助 WHERE 生成
+- **LLM 失败治理**：错误分类（可重试/不可重试）+ 指数退避重试（含抖动）+ SQL 生成 JSON 结构化输出（服务端不支持自动降级）+ 图内优雅降级（LLM 故障不 500，修复循环及时止损）
+- **三层可观测性**：结构化日志（loguru，request_id 全链路关联）、Prometheus 业务指标（节点耗时/调用成本/重试次数/SQL 成功率）、请求级 Trace 落盘（节点与 LLM span，离线可分析）
 - **完整产品形态**：FastAPI 后端（REST + SSE 流式进度）+ Vue 3 前端（会话管理、SQL 卡片、结果表格、执行细节展示）
 
 ## 🏗 系统架构
@@ -86,7 +88,9 @@ graph TD
 | 工具生态 | MCP Python SDK | 同时实现 MCP Client 与 MCP Server |
 | 后端 | FastAPI + Uvicorn | REST + SSE（Server-Sent Events）流式 |
 | 前端 | Vue 3 + Vite | 组合式 API，fetch + ReadableStream 消费 SSE |
-| 测试 | 自写脚本测试 | test/ 目录按模块覆盖 |
+| 失败治理 | tenacity | 错误分类 + 指数退避重试（含抖动）+ 结构化输出降级 |
+| 可观测性 | loguru + prometheus-client + 自研 Trace | 结构化日志（request_id 关联）/ 业务指标 / 请求级 span 落盘 |
+| 测试 | unittest + 脚本测试 | test/ 目录按模块覆盖（离线 mock，不依赖真实 API） |
 
 ## 📂 项目结构
 
@@ -102,7 +106,8 @@ askdata/
 │   ├── mcp_server/       # MCP Server：对外暴露查库工具
 │   ├── mcp_client/       # MCP Client：管理外部工具服务器（含 calculator 演示）
 │   ├── server/           # FastAPI 层：路由、schema、lifespan
-│   ├── data/             # 演示数据库、种子数据、技能定义、会话存储
+│   ├── observability/    # 可观测性：日志/trace/指标/中间件（request_id 贯穿）
+│   ├── data/             # 演示数据库、种子数据、技能定义、会话存储、trace落盘
 │   ├── test/             # 各模块验证脚本
 │   ├── main.py           # CLI 交互入口（python main.py）
 │   └── requirements.in   # 依赖清单（pip-compile 管理）
@@ -181,12 +186,16 @@ npm run dev      # 打开 http://localhost:5173
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | /api/health | 健康检查 |
-| POST | /api/chat | 提问，返回 answer / SQL / 表格数据 / 命中字段 / 自修复记录 |
+| POST | /api/chat | 提问，返回 answer / SQL / 表格数据 / 命中字段 / 自修复记录 / trace_id |
 | POST | /api/chat/stream | SSE 流式：逐节点推送执行进度与中间结果 |
 | GET | /api/sessions | 会话列表 |
 | GET | /api/sessions/{id} | 会话完整历史 |
 | DELETE | /api/sessions/{id} | 删除会话 |
 | GET | /api/skills | 可用技能列表 |
+| GET | /metrics | Prometheus 业务指标（LLM调用/重试/Token/节点耗时/SQL成功率） |
+
+**排查约定**：所有响应携带 `X-Request-ID` 头（也接受客户端传入）；`/api/chat` 响应含 `trace_id`。
+日志（`data/logs/app.jsonl`）、trace（`data/traces/*.jsonl`）、指标三者通过 request_id/trace_id 关联。
 
 ## 🧠 核心技术设计
 
@@ -202,23 +211,40 @@ npm run dev      # 打开 http://localhost:5173
 
 **Skill × MCP 怎么联动？** 技能 = 专属指令 + 检索范围 + 工具白名单；MCP 把外部工具统一成 function calling schema。技能命中时限制检索只查相关表、只暴露该技能声明的 MCP 工具——实现"按需加载能力"的 Agent 设计。
 
+**为什么错误要分类后再重试？** 不是所有失败都值得重试：限流（429）、超时、连接错误、服务端 5xx 是瞬态的，重试能恢复；鉴权失败、参数错误是确定性的，重试只会浪费预算。把 OpenAI SDK 异常映射成「可重试/不可重试」两类，用指数退避 + 随机抖动（wait_random_exponential）避免多请求同时重试造成"惊群"。每次调用的重试次数计入指标，是评估"失败治理收益"的直接证据。
+
+**为什么 SQL 生成用 JSON 结构化输出？** 正则从自由文本提取 SQL 是 Text2SQL 的隐形杀手（模型多解释一句就提取失败）。用 response_format=json_object 约束输出协议，解析器先按 JSON 解析、失败再逐级降级到正则兜底；服务端不支持 response_format 时 ModelClient 自动降级为普通文本模式重试，兼容任意 OpenAI 兼容服务。
+
+**LLM 故障时图怎么走？** 生成节点重试耗尽后不抛异常（否则整图失败→HTTP 500），而是写入 llm_error 状态，执行路由识别后直接终止修复循环（修复同样依赖 LLM，继续循环只会浪费预算），最终给用户诚实报错；路由/改写/闲聊/工具规划/回答等节点各自有降级路径，LLM 完全宕机时系统依然可控地响应。
+
+**可观测性为什么分三层？** 日志解决"当时发生了什么"（request_id 全链路关联）；指标解决"系统整体健康度"（节点 P50/P95、调用成本、SQL 首轮成功率——问题量化后才能优化）；trace 解决"这一次请求慢在哪"（节点与 LLM span 时间线落盘 JSONL，离线可分析）。全部本地运行不依赖外部服务，trace 结构标准化，后续可无缝迁移 Langfuse/OpenTelemetry 后端。子图（查询 Agent）通过 config 继承父图 callbacks，保证协作模式的节点也进入 trace。
+
 ## 🧪 测试
 
 ```bash
-cd backend && python -m pytest test/  # 或逐文件 python test/test_xxx.py
+cd backend
+python -m unittest discover -s test -p "test_collaboration.py" -v   # 多智能体协作
+python -m unittest test.test_model_client test.test_observability test.test_sql_json -v
+python test/test_graph.py      # LangGraph 全链路（mock）
+python test/test_memory.py     # 记忆模块
+# ... 其余模块见下表（均可离线运行，不依赖真实 API）
 ```
 
 | 文件 | 覆盖 |
 |---|---|
-| test_retrieval.py | BM25 / 向量检索 / RRF 融合 |
+| test_retrieval.py | BM25 / 向量检索 / RRF 融合（需真实 API） |
 | test_schema_store.py | 字段文档生成 |
-| test_generator.py | SQL 生成与修复 prompt |
+| test_generator.py | SQL 生成与修复 prompt（mock） |
 | test_executor.py | 只读执行、危险语句拦截、LIMIT 注入 |
 | test_graph.py | LangGraph 全链路（mock 模式） |
 | test_memory.py | 会话记忆、滚动摘要、长期记忆 |
 | test_skill_registry.py | 技能加载与关键词匹配 |
 | test_mcp_server.py | MCP Server 工具 |
 | test_tool_manager.py | MCP Client 工具管理 |
+| test_collaboration.py | 多智能体协作：规划/审核/返工/失败隔离/模式切换 |
+| test_model_client.py | LLM 重试退避、错误分类、JSON模式降级、流式、用量指标 |
+| test_observability.py | trace 生命周期/幂等/落盘、回调、中间件 request_id |
+| test_sql_json.py | SQL 响应解析：JSON 优先 + 正则兜底 |
 
 ## 🗺 Roadmap
 
@@ -230,7 +256,9 @@ cd backend && python -m pytest test/  # 或逐文件 python test/test_xxx.py
 - [x] Skill 技能系统 × MCP 工具生态
 - [x] FastAPI 后端（REST + SSE）
 - [x] Vue 3 前端
-- [ ] token 级流式回答（ModelClient 接入 stream=True）
+- [x] LLM 失败治理：错误分类 + 指数退避重试 + JSON 结构化输出（含降级）
+- [x] 三层可观测性：结构化日志 / Prometheus 指标 / 请求级 Trace
+- [ ] token 级流式回答（ModelClient 已提供 llm_stream，待接入 answer_node 与 SSE）
 - [ ] 检索质量评测集（固定 query 集 + 命中率指标）
 - [ ] Checkpoint 持久化（SqliteSaver，替代内存版）
 

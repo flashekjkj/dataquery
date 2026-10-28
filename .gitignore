@@ -6,3 +6,5 @@ COMMAND.md
 test.py
 .env.docker
 .docker-data/
+data/logs/
+data/traces/

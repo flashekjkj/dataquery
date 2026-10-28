@@ -14,5 +14,6 @@ def review_task(client, payload):
     response = client.llm_invoke(
         prompt=json.dumps(payload, ensure_ascii=False, default=str),
         system_prompt=REVIEW_PROMPT,
+        operation="review",
     )
     return parse_contract(ReviewDecision, response.content)

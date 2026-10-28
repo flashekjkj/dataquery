@@ -334,3 +334,8 @@ yarl==1.25.1
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
+
+# Observability & reliability stack (added manually; regenerate with pip-compile when available)
+tenacity==9.2.1
+loguru==0.7.3
+prometheus-client==0.26.0

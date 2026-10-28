@@ -7,6 +7,11 @@ from fastapi import APIRouter,HTTPException,Request
 from fastapi.responses import StreamingResponse
 
 from agent.runtime import ask_data_agent, initial_agent_state
+from app.model_client import LLMCallError
+from observability import logger, get_request_id
+from observability.context import session_id_var
+from observability.metrics import record_chat_request
+from observability.tracer import end_trace, GraphCallbackHandler
 from server.schemas import (
     ChatRequest,ChatResponse,HealthResponse,
     SessionDetail,SessionSummary,SkillInfo
@@ -26,6 +31,7 @@ def health(request:Request):
 def chat(req:ChatRequest,request:Request):
     """核心接口：提问，返回回答+SQL+查询结果+自修复过程"""
     session_id = req.session_id or uuid.uuid4().hex
+    session_id_var.set(session_id)
     try:
         result = ask_data_agent(
             request.app.state.graph,
@@ -34,9 +40,24 @@ def chat(req:ChatRequest,request:Request):
             forced_skill=req.forced_skill,
             execution_mode=req.execution_mode,
         )
+    except LLMCallError as e:
+        # LLM 重试耗尽：对客户端是「上游服务不可用」，用 503 语义
+        # 并携带 request_id，便于按日志/trace 排查
+        record_chat_request(ok=False)
+        logger.error("Agent执行失败（LLM不可用）：{}", e)
+        raise HTTPException(
+            status_code=503,
+            detail=f"模型服务不可用（{e.kind}），请稍后重试。request_id={get_request_id()}",
+        )
     except Exception as e:
-        raise HTTPException(status_code=500,detail=f"Agent执行失败：{e}")
+        record_chat_request(ok=False)
+        logger.exception("Agent执行失败")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent执行失败。request_id={get_request_id()}",
+        )
 
+    record_chat_request(ok=result.get("success", False))
     if result.get("query_result") is not None:
         result["query_result"] = result["query_result"].model_dump()
     return {**result,"session_id":session_id}
@@ -75,11 +96,15 @@ def list_skills(request:Request):
 async def chat_stream(req:ChatRequest,request:Request):
     """SSE进度流：每完成一个图节点推送一次事件，前端实时显示执行阶段"""
     session_id = req.session_id or uuid.uuid4().hex
+    session_id_var.set(session_id)
     graph = request.app.state.graph
 
     async def event_generator():
         initial_state = initial_agent_state(req.question, req.forced_skill, req.execution_mode)
-        config = {"configurable": {"thread_id": session_id}, "recursion_limit": 64}
+        handler = GraphCallbackHandler()
+        config = {"configurable": {"thread_id": session_id}, "recursion_limit": 64,
+                  "callbacks": [handler]}
+        ok = False
         try:
             # updates模式：每完成一个节点，yield一次该节点的状态增量
             async for update in graph.astream(initial_state,config=config,stream_mode="updates"):
@@ -102,8 +127,14 @@ async def chat_stream(req:ChatRequest,request:Request):
                     if "attempts_log" in node_output:
                         event["attempts_log"] = node_output["attempts_log"]
                     yield f"data: {json.dumps(event,ensure_ascii=False)}\n\n"
+            ok = True
             yield f'data: {json.dumps({"type":"done","session_id":session_id},ensure_ascii=False)}\n\n'
         except Exception as e:
-            yield f'data: {json.dumps({"type":"error","message":str(e)},ensure_ascii=False)}\n\n'
+            logger.error("SSE流执行异常：{}", e)
+            yield f'data: {json.dumps({"type":"error","message":str(e),"request_id":get_request_id()},ensure_ascii=False)}\n\n'
+        finally:
+            # SSE 的 trace 由这里收尾（中间件对 event-stream 响应不做 flush）
+            record_chat_request(ok=ok)
+            end_trace()
 
     return StreamingResponse(event_generator(),media_type="text/event-stream")

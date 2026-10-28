@@ -4,9 +4,15 @@ import sys
 from typing import Optional
 
 from agent.graph import build_graph
+from app.config import settings
 from app.model_client import ModelClient
 from memory.conversation import ConversationMemory
 from memory.long_term import LongTermMemoryStore
+from observability import setup_logging, logger
+from observability.metrics import init_metrics
+from observability.tracer import (
+    configure_trace_dir, start_trace, end_trace, current_trace, GraphCallbackHandler,
+)
 from retrieval.service import build_hybrid_index
 from sql.executor import SQLExecutor
 from skill.registry import SkillRegistry
@@ -22,8 +28,17 @@ def build_agent(max_attempts: int = 3):
     构建Agent全链路：模型客户端 + 混合检索 + SQL执行器 + 两种记忆 + 技能注册表 + LangGraph图
     返回 (graph, conv_memory,skill_registry)：图用于问答，conv_memory用于CLI展示会话历史
     """
+    # 日志与 trace 初始化（幂等；CLI 与 FastAPI 两条入口都经过这里）
+    setup_logging(level=settings.OBS_LOG_LEVEL)
+    trace_dir = Path(settings.OBS_TRACE_DIR)
+    if not trace_dir.is_absolute():
+        trace_dir = BASE_DIR / trace_dir
+    if settings.OBS_TRACE_ENABLED:
+        configure_trace_dir(trace_dir)
+    init_metrics(model_id=settings.LLM_MODEL_ID)
+
     model_client = ModelClient(mock=False)
-    print("正在构建混合检索索引（对所有字段文档生成embedding）...")
+    logger.info("正在构建混合检索索引（对所有字段文档生成embedding）...")
     hybrid = build_hybrid_index(model_client)
     executor = SQLExecutor(str(DB_PATH))
     conv_memory = ConversationMemory(data_root=DATA_DIR)
@@ -46,6 +61,7 @@ def build_agent(max_attempts: int = 3):
         skill_registry=skill_registry,
         mcp_manager=mcp_manager
     )
+    logger.info("Agent构建完成")
     return graph, conv_memory, skill_registry
 
 
@@ -64,16 +80,23 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
     - forced_skill：强制指定技能名（/skill命令），None=自动匹配
     - 初始state必须带上attempts和attempts_log（attempts参与加法运算，
       attempts_log每次显式传[]覆盖重置，防止跨轮累积）
+    - 可观测性：无 trace 时自行创建（CLI 场景），invoke 挂节点回调；
+      由本函数创建的 trace 在返回前 flush（HTTP 场景的 trace 归中间件/路由管理）
     """
+    owned_trace = current_trace() is None
+    trace = start_trace(session_id=thread_id)
+    handler = GraphCallbackHandler()
+    logger.info("Agent调用开始（thread_id={} trace_id={}）", thread_id, trace.trace_id)
     final_state = graph.invoke(initial_agent_state(user_question, forced_skill, execution_mode),
-        config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64},
+        config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64,
+                "callbacks": [handler]},
     )
 
     route = final_state.get("route") or "data"
     field_docs = final_state.get("field_docs") or []
     attempts_log = final_state.get("attempts_log") or []
 
-    return {
+    result = {
         "success": bool(final_state.get("success")) if route == "data" else True,
         "route": route,
         "user_question": user_question,
@@ -89,4 +112,8 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
         "collaboration_status": final_state.get("collaboration_status", "single"),
         "task_plan": final_state.get("task_plan"),
         "task_results": final_state.get("task_results") or [],
+        "trace_id": trace.trace_id,
     }
+    if owned_trace:
+        end_trace()
+    return result

@@ -63,11 +63,15 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         """
         SQL执行后的条件分支
         1. success=True → 直接到answer_node
-        2. success=False 且 已执行次数(attempts+1) < max_attempts → repair_node（计数，回到生成SQL）
-        3. success=False 且 次数耗尽 → answer_node，返回失败提示
+        2. llm_error 置位（LLM故障）→ 直接answer_node：
+           修复循环同样依赖 LLM，继续循环只会浪费调用预算
+        3. success=False 且 已执行次数(attempts+1) < max_attempts → repair_node（计数，回到生成SQL）
+        4. success=False 且 次数耗尽 → answer_node，返回失败提示
         注意：attempts在repair_node中+1，路由时 attempts+1 = 已执行的总尝试次数
         """
         if state["success"]:
+            return "answer_node"
+        if state.get("llm_error"):
             return "answer_node"
         if state["attempts"] + 1 < max_attempts:
             return "repair_node"

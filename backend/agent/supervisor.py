@@ -59,7 +59,8 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
                 "now": datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(),
                 "schema": SCHEMA, "relations": RELATIONS,
                 "skill": skill_context(state),
-            }, ensure_ascii=False), system_prompt=PLAN_PROMPT)
+            }, ensure_ascii=False), system_prompt=PLAN_PROMPT,
+                operation="supervisor_plan")
             plan = parse_contract(TaskPlan, response.content)
         except Exception:
             logger.exception("Supervisor planning failed")
@@ -70,7 +71,7 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
                 "collaboration_status": "clarification" if plan.clarification else "running",
                 "answer": plan.clarification, "success": False}
 
-    def query_node(state):
+    def query_node(state, config=None):
         task = state["task_plan"]["tasks"][state["task_index"]]
         completed = {r["task_id"]: r for r in state["task_results"]}
         missing = [key for key in task["depends_on"] if completed[key]["status"] != "approved"]
@@ -88,12 +89,17 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
             "review_feedback": state["review_feedback"],
         }
         try:
+            # 子图继承父图 config 中的 callbacks，保证子图节点也进 trace/指标；
+            # 递归上限收窄到子图规模（32）
+            sub_config = {"recursion_limit": 32}
+            if config is not None:
+                sub_config = {**config, "recursion_limit": 32}
             result = query_agent.invoke({
                 "user_question": json.dumps(context, ensure_ascii=False),
                 "attempts": 0, "attempts_log": [],
                 "user_profile": state.get("user_profile", ""),
                 "active_skill": state.get("active_skill"),
-            }, config={"recursion_limit": 32})
+            }, config=sub_config)
             output = {**base, "status": "queried" if result["success"] else "failed",
                       "sql": result.get("sql"),
                       "query_result": result["query_result"].model_dump(mode="json") if result.get("query_result") else None,
@@ -164,7 +170,8 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
         else:
             try:
                 response = client.llm_invoke(prompt=json.dumps(payload, ensure_ascii=False),
-                                             system_prompt=SUMMARY_PROMPT)
+                                             system_prompt=SUMMARY_PROMPT,
+                                             operation="supervisor_summary")
                 answer = (response.content or "").strip()
                 if not answer:
                     raise ValueError("empty summary")

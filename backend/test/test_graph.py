@@ -34,7 +34,7 @@ class FakeClient:
         self.route_answer = route_answer
         self.generate_calls = 0
 
-    def llm_invoke(self, prompt, system_prompt=None):
+    def llm_invoke(self, prompt, system_prompt=None, **kwargs):
         if system_prompt == ROUTE_SYSTEM_PROMPT:
             return LLMResponse(content=self.route_answer, usage={})
         if system_prompt in (GENERATE_SQL_SYSTEM_PROMPT, REPAIR_SQL_SYSTEM_PROMPT):
@@ -59,7 +59,7 @@ class FakeClient:
         ]
         return RerankResponse(results=items)
 
-    def chat_with_tools(self, prompt, system_prompt=None, tools=None):
+    def chat_with_tools(self, prompt, system_prompt=None, tools=None, **kwargs):
         """固定返回calculator工具调用，用于工具链路测试（不依赖真实API）"""
         return {"content": "", "tool_calls": [{"name": "calculator__calculate", "arguments": {"expression": "3856*0.85"}}]}
 
