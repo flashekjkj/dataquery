@@ -25,7 +25,7 @@ def test_match():
 def test_get():
     registry = SkillRegistry(SKILLS_DIR)
     skill = registry.get("sales_analysis")
-    assert skill.table_scope == ["orders", "customers"]
+    assert skill.table_scope == ["orders", "customers", "products"]
     assert registry.get("not_exist") is None
     print("✅ test_get 通过！按名获取正确")
 

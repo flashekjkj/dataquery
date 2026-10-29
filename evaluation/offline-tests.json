@@ -1,0 +1,16 @@
+{
+  "run": 67,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "modules": [
+    "test_collaboration",
+    "test_runtime_lifecycle",
+    "test_model_client",
+    "test_sql_json",
+    "test_observability",
+    "test_evaluation"
+  ],
+  "function_module": "test_graph",
+  "ok": true
+}

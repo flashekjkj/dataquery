@@ -102,7 +102,8 @@ class ModelClient:
             self._client = OpenAI(
                 api_key=settings.LLM_API_KEY,
                 base_url=settings.LLM_BASE_URL,
-                timeout=settings.LLM_TIMEOUT
+                timeout=settings.LLM_TIMEOUT,
+                max_retries=0,
             )
 
     # ---------- 内部工具 ----------
@@ -191,7 +192,7 @@ class ModelClient:
         """单次 chat.completions 调用：异常统一转 LLMCallError 后上抛"""
         try:
             return self._client.chat.completions.create(
-                model=self.model_id, messages=messages, **kwargs)
+                model=self.model_id, messages=messages, temperature=settings.LLM_TEMPERATURE, **kwargs)
         except LLMCallError:
             raise
         except Exception as e:

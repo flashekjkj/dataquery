@@ -1,8 +1,8 @@
 from __future__ import annotations
-import re
 from datetime import date, datetime
 from decimal import Decimal
 import duckdb
+from threading import Timer
 from pydantic import BaseModel
 from typing import List,Any
 
@@ -29,62 +29,50 @@ class SqlExecuteError(Exception):
         super().__init__(f"SQL执行失败：{error_msg}")
 
 class SQLExecutor:
-    """危险操作关键字"""
-    DANGER_KEYWORDS = [
-        "DROP","INSERT","UPDATE","DELETE","ALTER","CREATE","TRUNCATE","ATTACH","COPY","PRAGMA"
-    ]
-    # 正则：词边界匹配大写关键字
-    DANGER_PATTERN = re.compile(
-        r"\b(" + "|".join(DANGER_KEYWORDS) + r")\b",
-        re.IGNORECASE
-    )
-    # 检测是否已有LIMIT
-    LIMIT_PATTERN = re.compile(r"\bLIMIT\s+\d+",re.IGNORECASE)
-
-    def __init__(self,db_path:str):
+    """DuckDB 原生 parser 校验 + 只读/禁外部访问 + 外层结果上限。"""
+    def __init__(self, db_path: str, max_rows: int = 100, timeout_seconds: float = 5):
         self.db_path = db_path
+        self.max_rows = max_rows
+        self.timeout_seconds = timeout_seconds
 
-    def _check_safe(self,sql:str) -> None:
-        """安全检查：拦截写操作语句，不允许DDL/DML"""
-        if self.DANGER_PATTERN.search(sql):
-            raise SqlExecuteError(
-                sql=sql,
-                error_msg="安全拦截：禁止执行DDL/DML写操作语句"
-            )
+    def _connect(self):
+        return duckdb.connect(self.db_path, read_only=True,
+                              config={"enable_external_access": "false", "memory_limit": "256MB", "threads": "2"})
 
-    def _append_limit_if_missing(self,sql:str) -> str:
-        """没有LIMIT则追加 LIMIT 100"""
-        if not self.LIMIT_PATTERN.search(sql):
-            sql = sql.strip().rstrip(";") + " LIMIT 100;"
-        return sql
-
-    def execute(self,sql:str) -> QueryResult:
-        """
-        执行SQL,只读DuckDB连接
-        :param sql:待执行SELECT语句
-        :return:QueryResult
-        :raises SqlExecuteError:安全校验失败 / duckdb执行错误
-        """
-        sql_raw = sql
-        self._check_safe(sql_raw)
-        sql_to_run = self._append_limit_if_missing(sql_raw)
-
+    def _check_safe(self, sql: str) -> None:
         try:
-            with duckdb.connect(self.db_path,read_only=True) as conn:
-                res = conn.execute(sql_to_run)
-                columns = [c[0] for c in res.description]
-                rows = [[_json_safe(v) for v in row] for row in res.fetchmany(100)]
-                # 判断是否截断
-                is_truncated = bool(res.fetchone())
-                row_count = len(rows)
-                return QueryResult(
-                    columns=columns,
-                    rows=rows,
-                    row_count=row_count,
-                    is_truncated=is_truncated
-                )
-        except Exception as e:
-            raise SqlExecuteError(sql=sql_raw,error_msg=str(e)) from e
+            with duckdb.connect(":memory:") as parser:
+                statements = parser.extract_statements(sql)
+            if len(statements) != 1 or statements[0].type != duckdb.StatementType.SELECT:
+                raise ValueError("仅允许单条 SELECT/WITH 查询")
+        except Exception as exc:
+            raise SqlExecuteError(sql, "安全拦截：" + str(exc)) from exc
+
+    def _append_limit_if_missing(self, sql: str) -> str:
+        # 不改写用户内层 LIMIT；第 max_rows+1 行只用于判断是否发生系统截断。
+        query = sql.strip().rstrip(";")
+        return f"SELECT * FROM (\n{query}\n) AS _askdata_result LIMIT {self.max_rows + 1}"
+
+    def execute(self, sql: str) -> QueryResult:
+        self._check_safe(sql)
+        try:
+            with self._connect() as conn:
+                timer = Timer(self.timeout_seconds, conn.interrupt)
+                timer.daemon = True
+                timer.start()
+                try:
+                    res = conn.execute(self._append_limit_if_missing(sql))
+                    columns = [c[0] for c in res.description]
+                    raw_rows = res.fetchmany(self.max_rows + 1)
+                finally:
+                    timer.cancel()
+                truncated = len(raw_rows) > self.max_rows
+                rows = [[_json_safe(v) for v in row] for row in raw_rows[:self.max_rows]]
+                return QueryResult(columns=columns, rows=rows, row_count=len(rows),
+                                   is_truncated=truncated)
+        except Exception as exc:
+            message = "查询超时：执行已中断" if isinstance(exc, duckdb.InterruptException) else str(exc)
+            raise SqlExecuteError(sql, message) from exc
 
     def sample_values(self,table:str,column:str,n:int = 5) -> List[Any]:
         """
@@ -98,7 +86,7 @@ class SQLExecutor:
         SELECT DISTINCT "{column}" FROM "{table}" LIMIT {n}
         """
         try:
-            with duckdb.connect(self.db_path,read_only=True) as conn:
+            with self._connect() as conn:
                 rows = conn.execute(sample_sql).fetchall()
                 return [row[0] for row in rows]
         except Exception as e:

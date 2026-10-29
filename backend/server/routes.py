@@ -7,10 +7,11 @@ from fastapi import APIRouter,HTTPException,Request
 from fastapi.responses import StreamingResponse
 
 from agent.runtime import ask_data_agent, initial_agent_state
+from agent.outcomes import classify_outcome
 from app.model_client import LLMCallError
 from observability import logger, get_request_id
 from observability.context import session_id_var
-from observability.metrics import record_chat_request
+from observability.metrics import record_chat_request, record_chat_outcome
 from observability.tracer import end_trace, GraphCallbackHandler
 from server.schemas import (
     ChatRequest,ChatResponse,HealthResponse,
@@ -41,6 +42,7 @@ def chat(req:ChatRequest,request:Request):
             execution_mode=req.execution_mode,
         )
     except LLMCallError as e:
+        record_chat_outcome("failed")
         # LLM 重试耗尽：对客户端是「上游服务不可用」，用 503 语义
         # 并携带 request_id，便于按日志/trace 排查
         record_chat_request(ok=False)
@@ -50,6 +52,7 @@ def chat(req:ChatRequest,request:Request):
             detail=f"模型服务不可用（{e.kind}），请稍后重试。request_id={get_request_id()}",
         )
     except Exception as e:
+        record_chat_outcome("failed")
         record_chat_request(ok=False)
         logger.exception("Agent执行失败")
         raise HTTPException(
@@ -60,6 +63,7 @@ def chat(req:ChatRequest,request:Request):
     record_chat_request(ok=result.get("success", False))
     if result.get("query_result") is not None:
         result["query_result"] = result["query_result"].model_dump()
+    record_chat_outcome(result["outcome"])
     return {**result,"session_id":session_id}
 
 @router.get("/sessions",response_model=List[SessionSummary])
@@ -105,6 +109,8 @@ async def chat_stream(req:ChatRequest,request:Request):
         config = {"configurable": {"thread_id": session_id}, "recursion_limit": 64,
                   "callbacks": [handler]}
         ok = False
+        outcome_recorded = False
+        final_state = {}
         try:
             # updates模式：每完成一个节点，yield一次该节点的状态增量
             async for update in graph.astream(initial_state,config=config,stream_mode="updates"):
@@ -112,6 +118,7 @@ async def chat_stream(req:ChatRequest,request:Request):
                     # updates模式下，返回空dict的节点会被LangGraph变成None，跳过即可
                     if node_output is None:
                         continue
+                    final_state.update(node_output)
                     event = {"type":"node","node":node_name}
                     # 只挑前端关心的字段
                     for key in ("rewritten_question","sql","answer","success","route","active_skill",
@@ -127,12 +134,19 @@ async def chat_stream(req:ChatRequest,request:Request):
                     if "attempts_log" in node_output:
                         event["attempts_log"] = node_output["attempts_log"]
                     yield f"data: {json.dumps(event,ensure_ascii=False)}\n\n"
-            ok = True
-            yield f'data: {json.dumps({"type":"done","session_id":session_id},ensure_ascii=False)}\n\n'
+            outcome = classify_outcome(final_state)
+            ok = outcome == "success"
+            record_chat_outcome(outcome)
+            outcome_recorded = True
+            yield f'data: {json.dumps({"type":"done","session_id":session_id,"success":ok,"outcome":outcome},ensure_ascii=False)}\n\n'
         except Exception as e:
+            record_chat_outcome("failed")
+            outcome_recorded = True
             logger.error("SSE流执行异常：{}", e)
             yield f'data: {json.dumps({"type":"error","message":str(e),"request_id":get_request_id()},ensure_ascii=False)}\n\n'
         finally:
+            if not outcome_recorded:
+                record_chat_outcome("cancelled")
             # SSE 的 trace 由这里收尾（中间件对 event-stream 响应不做 flush）
             record_chat_request(ok=ok)
             end_trace()

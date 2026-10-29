@@ -30,6 +30,7 @@ class ChatResponse(BaseModel):
     # 本次执行的 trace_id（与 request_id 同源），用于按 trace 文件/日志排查
     trace_id:Optional[str] = None
     success:bool
+    outcome:str = "success"
     route:str
     user_question:str
     rewritten_question:Optional[str] = None

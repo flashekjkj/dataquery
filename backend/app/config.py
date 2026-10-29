@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # SQL 生成/修复是否启用 JSON 结构化输出（response_format=json_object），
     # 服务端不支持时 ModelClient 自动降级为普通文本模式
     LLM_JSON_MODE:bool = True
+    LLM_TEMPERATURE:float = 0.0
 
     # ===== 可观测性 =====
     # 日志级别：DEBUG / INFO / WARNING / ERROR

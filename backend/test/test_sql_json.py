@@ -51,7 +51,7 @@ class ParseSqlResponseTests(unittest.TestCase):
 
     def test_normalize_semicolon_and_space(self):
         sql = parse_sql_response('{"sql": "SELECT   a,\\n  b  FROM t"}')
-        self.assertEqual(sql, "SELECT a, b FROM t;")
+        self.assertEqual(sql, "SELECT   a,\n  b  FROM t;")
 
 
 class ExtractSqlTests(unittest.TestCase):

@@ -1,162 +1,19 @@
 from __future__ import annotations
 import json
-from typing import Any, Dict,List,Optional
+from typing import List, Optional
 
 from agent.state import AskDataState
-from data.database import RELATIONS
 from sql.executor import SqlExecuteError
 from sql.generator import generate_sql, generate_repair_sql
-from sql.sql_prompts import (
-    ANSWER_FROM_RESULT_SYSTEM_PROMPT,
-    ANSWER_FROM_RESULT_USER_TPL,
-    CHAT_SYSTEM_PROMPT,
-    MEMORY_EXTRACT_SYSTEM_PROMPT,
-    MEMORY_EXTRACT_USER_TPL,
-    MEMORY_SUMMARY_SYSTEM_PROMPT,
-    MEMORY_SUMMARY_USER_TPL,
-    REWRITE_QUERY_SYSTEM_PROMPT,
-    REWRITE_QUERY_USER_TPL,
-    ROUTE_SYSTEM_PROMPT,
-    ROUTE_USER_TPL,
-    TOOL_ANSWER_SYSTEM_PROMPT,
-    TOOL_ANSWER_USER_TPL,
-    TOOL_PLAN_SYSTEM_PROMPT
-)
+from sql.sql_prompts import MEMORY_EXTRACT_SYSTEM_PROMPT, MEMORY_EXTRACT_USER_TPL, MEMORY_SUMMARY_SYSTEM_PROMPT, MEMORY_SUMMARY_USER_TPL, REWRITE_QUERY_SYSTEM_PROMPT, REWRITE_QUERY_USER_TPL, TOOL_ANSWER_SYSTEM_PROMPT, TOOL_ANSWER_USER_TPL, TOOL_PLAN_SYSTEM_PROMPT
 from app.model_client import LLMCallError
 from observability import logger
 from observability.metrics import record_sql_execution
 
-# 长期记忆提炼的触发词：问题含这些词才调用LLM提炼偏好，否则跳过（省token+防误记）
-MEMORY_TRIGGER_WORDS = ["以后", "总是", "一直", "默认", "记住", "偏好", "习惯", "通常"]
-
-# 混合检索召回的字段文档数量（喂给SQL生成的schema上下文）
-TOP_K_SCHEMA = 8
-# 需要采样实际取值的字段角色：维度/过滤/时间字段的枚举值对写WHERE条件最有价值
-SAMPLE_ROLES = {"dimension", "filter", "time"}
-# 最多采样多少个字段的取值，控制prompt长度
-MAX_SAMPLE_FIELDS = 6
-
-# ===================== 业务逻辑函数 =====================
-
-def route_question(model_client, question: str) -> str:
-    """
-    意图路由：判断用户问题是闲聊/常识（chat）、查数据库（data）还是需要外部工具（tool）
-    返回 "data" / "tool" / "chat"；LLM 不可用时降级为 "data"（数据查询链路有
-    自己的失败治理与诚实报错，比路由层抛异常更能保住用户体验）
-    """
-    try:
-        resp = model_client.llm_invoke(
-            prompt=ROUTE_USER_TPL.format(question=question),
-            system_prompt=ROUTE_SYSTEM_PROMPT,
-            operation="route",
-        )
-    except Exception as e:
-        logger.warning("意图路由LLM调用失败，降级为data：{}", e)
-        return "data"
-    content = (resp.content or "").strip().lower()
-    if "tool" in content:
-        return "tool"
-    if "data" in content:
-        return "data"
-    if "chat" in content:
-        return "chat"
-    # 解析失败默认走数据查询
-    return "data"
-
-
-def answer_directly(model_client, question: str, extra_instructions:str = "") -> str:
-    """闲聊/常识问题：LLM直接回答，不碰数据库；extra_instructions为技能指令"""
-    system_prompt=CHAT_SYSTEM_PROMPT
-    if extra_instructions:
-        system_prompt = CHAT_SYSTEM_PROMPT + f"\n\n[当前技能要求]\n{extra_instructions}"
-    try:
-        resp = model_client.llm_invoke(
-            prompt=question,
-            system_prompt=system_prompt,
-            operation="chat",
-        )
-    except Exception as e:
-        logger.warning("闲聊回答LLM调用失败：{}", e)
-        return "抱歉，模型服务暂时不可用，请稍后重试。"
-    return (resp.content or "").strip()
-
-
-def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional[List[str]] = None):
-    """
-    为SQL生成准备上下文：
-    1. 混合检索召回top_k个字段文档
-    2. 提取命中表之间的关联关系
-    3. 对维度/过滤/时间字段采样实际取值（value retrieval）
-    返回 (field_docs, relations, value_samples)
-    """
-    recall_k = TOP_K_SCHEMA * 2 if table_scope else TOP_K_SCHEMA
-    # use_rerank=True：RRF融合后交给本地CrossEncoder精排，提高schema命中精度
-    ranked = hybrid.retrieve(question,top_k=recall_k,use_rerank=True)
-    if table_scope:
-        ranked = [item for item in ranked if item[0].table_name in table_scope]
-    field_docs = [doc for doc,_score in ranked[:TOP_K_SCHEMA]]
-
-    # 表关联：只保留与命中的表相关的条目，避免无关关系干扰LLM
-    hit_tables = {doc.table_name for doc in field_docs}
-    relations = [
-        f"{r['left_table']}.{r['left_field']} = {r['right_table']}.{r['right_field']}"
-        f"（{r['description']}）"
-        for r in RELATIONS
-        if r["left_table"] in hit_tables or r["right_table"] in hit_tables
-    ]
-
-    # 字段样例值：采样失败（如字段类型不支持）就跳过，不阻塞主流程
-    value_samples: Dict[str, Any] = {}
-    sampled = 0
-    for doc in field_docs:
-        if doc.role not in SAMPLE_ROLES or sampled >= MAX_SAMPLE_FIELDS:
-            continue
-        try:
-            samples = executor.sample_values(doc.table_name, doc.field_name, n=5)
-            value_samples[f"{doc.table_name}.{doc.field_name}"] = samples
-            sampled += 1
-        except SqlExecuteError:
-            continue
-    return field_docs, relations, value_samples
-
-
-def format_query_result_for_llm(query_result) -> str:
-    """把QueryResult对象转换为LLM可读的JSON字符串"""
-    if query_result is None:
-        return "无查询结果"
-    content = {
-        "columns": query_result.columns,
-        "rows": query_result.rows[:20],
-        "row_count": query_result.row_count,
-        "is_truncated": query_result.is_truncated,
-    }
-    return json.dumps(content, ensure_ascii=False, indent=2)
-
-
-def generate_natural_answer(model_client, user_question: str, final_sql: str, query_result) -> str:
-    """调用LLM，把SQL执行结果整理成自然语言回答"""
-    result_str = format_query_result_for_llm(query_result)
-    user_prompt = ANSWER_FROM_RESULT_USER_TPL.format(
-        user_question=user_question,
-        sql=final_sql,
-        query_result=result_str,
-    )
-    resp = model_client.llm_invoke(
-        prompt=user_prompt,
-        system_prompt=ANSWER_FROM_RESULT_SYSTEM_PROMPT,
-        operation="answer",
-    )
-    return (resp.content or "").strip()
-
-
-# ===================== 记忆相关辅助函数 =====================
-
-def _has_memory_trigger(question: str) -> bool:
-    """规则预筛：问题含触发词才做长期记忆提炼，省token+防止误记"""
-    return any(w in question for w in MEMORY_TRIGGER_WORDS)
-
-
-# ===================== 节点构建函数：闭包注入依赖 =====================
+from agent.query_context import (
+    route_question, answer_directly, retrieve_schema_context,
+    format_query_result_for_llm, generate_natural_answer, _has_memory_trigger,
+)
 
 def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,skill_registry=None,mcp_manager=None):
     """
@@ -217,12 +74,12 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
         由LLM决定调用哪个工具、传什么参数；未选择工具则tool_calls为空（下游降级闲聊）
         """
         if mcp_manager is None:
-            return {"tool_calls":[]}
+            return {"tool_calls":[], "degraded": True}
         effective = state.get("rewritten_question") or state["user_question"]
         allowed = _allowed_mcp_tools(state)
         tools_schema = mcp_manager.to_openai_tools(allowed_tools=allowed)
         if not tools_schema:
-            return {"tool_calls":[]}
+            return {"tool_calls":[], "degraded": True}
         try:
             resp = model_client.chat_with_tools(
                 prompt=effective,
@@ -232,14 +89,15 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
         except Exception as e:
             # 工具规划LLM失败 → 降级闲聊（下游 has_tool_call_router 走 chat_node）
             logger.warning("工具规划LLM调用失败，降级闲聊：{}", e)
-            return {"tool_calls":[]}
-        return {"tool_calls": resp["tool_calls"]}
+            return {"tool_calls":[], "degraded": True}
+        return {"tool_calls": resp["tool_calls"], "degraded": not bool(resp["tool_calls"])}
 
     def tool_execute_node(state: AskDataState) -> dict:
         """
         工具执行节点：依次执行规划好的工具调用，结果拼成文本写入tool_result
         """
         results = []
+        tool_success = bool(state.get("tool_calls"))
         for call in state.get("tool_calls") or []:
             full_name = call["name"]
             # 工具名格式 server__tool
@@ -251,8 +109,9 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                 text = mcp_manager.call_tool(server_name, tool_name, call.get("arguments") or {})
                 results.append(f"[{full_name}] {text}")
             except Exception as e:
+                tool_success = False
                 results.append(f"[{full_name}] 调用失败：{e}")
-        return {"tool_result": "\n".join(results)}
+        return {"tool_result": "\n".join(results), "tool_success": tool_success}
 
 
     def load_memory_node(state: AskDataState, config) -> dict:
@@ -268,6 +127,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
             # 每轮重置产物；Checkpoint 不能把上一轮 SQL/工具结果带入本轮。
             "rewritten_question": None, "sql": None, "query_result": None,
             "success": False, "answer": "", "last_error": None, "llm_error": None,
+            "tool_success": False, "degraded": False,
             "field_docs": [], "relations": [], "value_samples": {},
             "tool_calls": [], "tool_result": None, "attempts": 0, "attempts_log": [],
             "task_plan": None, "task_results": [], "task_index": 0,
@@ -449,7 +309,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                 logger.error("工具回答LLM调用失败：{}", e)
                 # 降级：直接展示工具原始结果，保证工具链路仍有产出
                 raw = state.get("tool_result") or ""
-                return {"answer": f"模型服务暂时不可用，以下是工具原始结果：\n{raw}"}
+                return {"answer": f"模型服务暂时不可用，以下是工具原始结果：\n{raw}", "degraded": True}
         if state["success"]:
             try:
                 ans = generate_natural_answer(
@@ -466,6 +326,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                     "查询已成功执行，但模型服务暂时不可用，无法生成自然语言总结。"
                     f"SQL：{state['sql']}\n结果前5行：{rows}"
                 )
+                return {"answer": ans, "degraded": True}
         else:
             log = state["attempts_log"] or []
             last_error = log[-1][1] if log else "未知错误"

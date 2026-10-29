@@ -1,0 +1,16 @@
+{
+  "n": 15,
+  "correct": 15,
+  "accuracy": 1.0,
+  "p50_seconds": 22.660497299999406,
+  "p95_seconds": 106.08787290000328,
+  "tokens": {
+    "input": 31898,
+    "output": 11992
+  },
+  "warmup_seconds": 32.21883810000145,
+  "unknown_usage_calls": 0,
+  "calls": 68,
+  "errors": 0,
+  "source_unchanged": true
+}

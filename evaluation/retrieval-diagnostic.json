@@ -1,0 +1,1694 @@
+{
+  "summary": {
+    "bm25": {
+      "n": 24,
+      "recall_at_8": 0.9777777777777779,
+      "recall_at_3": 0.8305555555555556,
+      "mrr": 0.8107638888888888,
+      "all_fields_rate": 0.9166666666666666
+    },
+    "vector": {
+      "n": 24,
+      "recall_at_8": 0.9916666666666667,
+      "recall_at_3": 0.8638888888888889,
+      "mrr": 0.8055555555555555,
+      "all_fields_rate": 0.9583333333333334
+    },
+    "hybrid": {
+      "n": 24,
+      "recall_at_8": 0.9277777777777777,
+      "recall_at_3": 0.8222222222222221,
+      "mrr": 0.8138888888888888,
+      "all_fields_rate": 0.875
+    },
+    "rerank": {
+      "n": 24,
+      "recall_at_8": 0.9277777777777777,
+      "recall_at_3": 0.7527777777777778,
+      "mrr": 0.7256944444444443,
+      "all_fields_rate": 0.875
+    }
+  },
+  "rows": [
+    {
+      "id": "dev-001",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-001",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount"
+      ]
+    },
+    {
+      "id": "dev-001",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-001",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.25,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-002",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-002",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-002",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-002",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-003",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.product_id",
+        "products.category",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-003",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "products.category",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-003",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.product_id",
+        "products.category",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-003",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.25,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.product_id",
+        "products.category",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-004",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.16666666666666666,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.paid_amount",
+        "orders.region",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-004",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.paid_amount",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-004",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.2,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-004",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-005",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-005",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-005",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-005",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.3333333333333333,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-006",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-006",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-006",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-006",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-007",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-007",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-007",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-007",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-008",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-008",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_level",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-008",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-008",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-009",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.category",
+        "orders.customer_id",
+        "orders.paid_amount",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-009",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.paid_amount",
+        "products.category"
+      ]
+    },
+    {
+      "id": "dev-009",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.category",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-009",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.category",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-010",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.region",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-010",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-010",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.region",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-010",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.region",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-011",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status",
+        "products.category"
+      ]
+    },
+    {
+      "id": "dev-011",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status",
+        "products.category",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-011",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status",
+        "products.category"
+      ]
+    },
+    {
+      "id": "dev-011",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status",
+        "products.category"
+      ]
+    },
+    {
+      "id": "dev-012",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-012",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-012",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id"
+      ]
+    },
+    {
+      "id": "dev-012",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id"
+      ]
+    },
+    {
+      "id": "dev-013",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-013",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-013",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-013",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-014",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-014",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount"
+      ]
+    },
+    {
+      "id": "dev-014",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-014",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.25,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-015",
+      "variant": "bm25",
+      "recall": 0.8,
+      "recall_at_3": 0.6,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "orders.category",
+        "orders.order_amount",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-015",
+      "variant": "vector",
+      "recall": 0.8,
+      "recall_at_3": 0.4,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_level",
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-015",
+      "variant": "hybrid",
+      "recall": 0.6,
+      "recall_at_3": 0.4,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_level",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-015",
+      "variant": "rerank",
+      "recall": 0.6,
+      "recall_at_3": 0.4,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_level",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-016",
+      "variant": "bm25",
+      "recall": 0.6666666666666666,
+      "recall_at_3": 0.3333333333333333,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.region",
+        "orders.status",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-016",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 0.3333333333333333,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "products.category",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-016",
+      "variant": "hybrid",
+      "recall": 0.6666666666666666,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-016",
+      "variant": "rerank",
+      "recall": 0.6666666666666666,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": false,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "products.product_id",
+        "products.product_name"
+      ]
+    },
+    {
+      "id": "dev-017",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-017",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-017",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-017",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "customers.region",
+        "orders.customer_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-018",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.125,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-018",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 0.0,
+      "mrr": 0.16666666666666666,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-018",
+      "variant": "hybrid",
+      "recall": 0.0,
+      "recall_at_3": 0.0,
+      "mrr": 0,
+      "all_fields": false,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-018",
+      "variant": "rerank",
+      "recall": 0.0,
+      "recall_at_3": 0.0,
+      "mrr": 0,
+      "all_fields": false,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-019",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-019",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-019",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-019",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-020",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-020",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-020",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-020",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-021",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-021",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.customer_level",
+        "customers.customer_name",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id"
+      ]
+    },
+    {
+      "id": "dev-021",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-021",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 0.5,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.product_id",
+        "orders.region"
+      ]
+    },
+    {
+      "id": "dev-022",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-022",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-022",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-022",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-023",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-023",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "orders.category",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.product_id",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-023",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-023",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 1.0,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-024",
+      "variant": "bm25",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status",
+        "products.product_id"
+      ]
+    },
+    {
+      "id": "dev-024",
+      "variant": "vector",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.region",
+        "orders.customer_id",
+        "orders.order_amount",
+        "orders.order_date",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-024",
+      "variant": "hybrid",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.region",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    },
+    {
+      "id": "dev-024",
+      "variant": "rerank",
+      "recall": 1.0,
+      "recall_at_3": 0.6666666666666666,
+      "mrr": 1.0,
+      "all_fields": true,
+      "docs": [
+        "customers.customer_id",
+        "customers.region",
+        "orders.order_amount",
+        "orders.order_id",
+        "orders.paid_amount",
+        "orders.region",
+        "orders.status"
+      ]
+    }
+  ]
+}

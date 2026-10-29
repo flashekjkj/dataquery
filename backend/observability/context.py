@@ -15,7 +15,7 @@ request_id_var: ContextVar[Optional[str]] = ContextVar("request_id", default=Non
 # 会话 ID：/chat 请求的 session_id，用于日志与 trace 关联
 session_id_var: ContextVar[Optional[str]] = ContextVar("session_id", default=None)
 # 请求级 Token 用量累计：ModelClient 每次调用后累加，请求结束时写访问日志
-request_tokens_var: ContextVar[dict] = ContextVar("request_tokens", default={"input": 0, "output": 0})
+request_tokens_var: ContextVar[Optional[dict]] = ContextVar("request_tokens", default=None)
 
 
 def get_request_id(default: str = "-") -> str:
@@ -27,11 +27,15 @@ def get_session_id(default: str = "-") -> str:
 
 
 def get_request_tokens() -> dict:
-    return request_tokens_var.get()
+    tokens = request_tokens_var.get()
+    if tokens is None:
+        tokens = {"input": 0, "output": 0}
+        request_tokens_var.set(tokens)
+    return tokens
 
 
 def accumulate_tokens(input_tokens: int, output_tokens: int) -> None:
     """LLM 调用后累加本请求的 Token 用量（dict 原地修改，context 副本间共享同一对象）"""
-    tokens = request_tokens_var.get()
+    tokens = get_request_tokens()
     tokens["input"] += int(input_tokens or 0)
     tokens["output"] += int(output_tokens or 0)

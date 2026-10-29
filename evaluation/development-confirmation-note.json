@@ -1,0 +1,8 @@
+{
+  "requested": 7,
+  "completed": 6,
+  "correct": 6,
+  "pending_case": "dev-027",
+  "completion": "interrupted_after_prolonged_upstream_wait",
+  "pending_usage": "unknown; not counted as passed"
+}

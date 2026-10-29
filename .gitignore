@@ -8,3 +8,33 @@ test.py
 .docker-data/
 data/logs/
 data/traces/
+
+# Local configuration, credentials and generated application state
+.claude/
+.codex/
+.agents/
+.venv/
+venv/
+node_modules/
+.env.*
+!.env.example
+!.env.docker.example
+*.pem
+*.key
+/backend/data/conversations/
+/backend/data/user_memory.json
+/backend/data/*.duckdb
+/backend/data/*.duckdb.wal
+/backend/test/test.py
+/EVALUATION_PLAN.md
+
+# Evaluation evidence is versioned; transient memory/logs/cache are not
+/evaluation/embedding_cache.json
+/evaluation/offline-stderr.log
+/evaluation/offline-tests.log
+/evaluation/runs/**/memory/
+/evaluation/runs/**/traces/
+*.duckdb.wal
+
+/backend/data/logs/
+/backend/data/traces/

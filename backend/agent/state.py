@@ -71,3 +71,5 @@ class AskDataState(TypedDict):
     review_round: int
     review_feedback: List[str]
     current_task_result: Optional[Dict[str, Any]]
+    tool_success: bool
+    degraded: bool

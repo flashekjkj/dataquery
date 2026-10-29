@@ -58,12 +58,13 @@ class Trace:
 
     def __init__(self, session_id: Optional[str] = None):
         self.trace_id = uuid.uuid4().hex
-        self.request_id = get_request_id() or self.trace_id
+        self.request_id = get_request_id(default="") or self.trace_id
         self.session_id = session_id or get_session_id()
         self.started_at = datetime.now().isoformat(timespec="milliseconds")
         self._spans: List[Span] = []
         self._lock = threading.Lock()   # 节点回调可能跨线程触发
         self.finished = False
+        self.start_counter = time.perf_counter()
 
     def add_span(self, name: str, kind: str, start_ms: float,
                  end_ms: float, metadata: Optional[Dict[str, Any]] = None) -> Span:
@@ -83,6 +84,7 @@ class Trace:
                 {
                     "name": s.name, "kind": s.kind,
                     "duration_ms": s.duration_ms, "metadata": s.metadata,
+                    "start_offset_ms": round(s.start_ms - self.start_counter * 1000, 2),
                 }
                 for s in sorted(self._spans, key=lambda x: x.start_ms)
             ]
@@ -91,6 +93,7 @@ class Trace:
             "request_id": self.request_id,
             "session_id": self.session_id,
             "started_at": self.started_at,
+            "duration_ms": round((time.perf_counter() - self.start_counter) * 1000, 2),
             "spans": spans,
         }
 
@@ -101,6 +104,8 @@ def start_trace(session_id: Optional[str] = None) -> Trace:
     if trace is None:
         trace = Trace(session_id=session_id)
         trace_var.set(trace)
+    elif session_id:
+        trace.session_id = session_id
     return trace
 
 
@@ -130,9 +135,9 @@ def end_trace(flush: bool = True) -> Optional[Dict[str, Any]]:
 def _flush_to_disk(snapshot: Dict[str, Any]) -> None:
     """把 span 列表追加写盘 + 打一条汇总日志（trace 摘要）"""
     spans = snapshot["spans"]
-    total_ms = sum(s["duration_ms"] or 0 for s in spans)
+    total_ms = snapshot["duration_ms"]
     logger.info(
-        "trace结束 | {} 个 span，累计耗时 {:.0f}ms | trace_id={}",
+        "trace结束 | {} 个 span，墙钟耗时 {:.0f}ms | trace_id={}",
         len(spans), total_ms, snapshot["trace_id"],
     )
     if _TRACE_ROOT is None:
@@ -148,6 +153,7 @@ def _flush_to_disk(snapshot: Dict[str, Any]) -> None:
                         "request_id": snapshot["request_id"],
                         "session_id": snapshot["session_id"],
                         "started_at": snapshot["started_at"],
+                        "request_duration_ms": snapshot["duration_ms"],
                         **span,
                     }
                     f.write(json.dumps(line, ensure_ascii=False) + "\n")
@@ -194,7 +200,7 @@ class GraphCallbackHandler(BaseCallbackHandler):
 
     def on_chain_start(self, serialized, inputs, *, run_id, parent_run_id=None,
                        tags=None, metadata=None, **kwargs) -> None:
-        name = self._extract_name(serialized)
+        name = kwargs.get("name") or (metadata or {}).get("langgraph_node") or self._extract_name(serialized)
         # LangGraph 内部通道写入事件（ChannelWrite<...>）不产生业务价值，跳过
         if "ChannelWrite" in name or name.startswith("__"):
             return

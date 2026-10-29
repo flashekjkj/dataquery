@@ -4,6 +4,7 @@ import re
 from typing import List,Dict,Any,Optional
 from pydantic import BaseModel
 from app.config import settings
+from app.clock import business_now
 from app.model_client import ModelClient
 from observability import logger
 from .executor import SQLExecutor,SqlExecuteError,QueryResult
@@ -37,21 +38,10 @@ def extract_sql(text:str) -> str:
         sql = match_code.group(1).strip()
         return _normalize_sql(sql)
 
-    # 2.匹配mock场景：模拟SQL: xxx
-    pattern_mock = re.compile(r"模拟SQL[:：]\s*(SELECT.*?)(?=\n|$)", re.DOTALL | re.IGNORECASE)
-    match_mock = pattern_mock.search(text)
-    if match_mock:
-        sql = match_mock.group(1).strip()
-        return _normalize_sql(sql)
-
-    # 3.提取SELECT开头语句
-    pattern_select = re.compile(r"(SELECT\b.*?)(?=;|```|$)",re.DOTALL | re.IGNORECASE)
-    match_select = pattern_select.search(text)
-    if match_select:
-        sql = match_select.group(1).strip()
-        return _normalize_sql(sql)
-
-    return ""
+    # 保留整个语句，不能在分号处截断（分号可能位于字面量中）。
+    # 也不能截掉 WITH；执行器使用 DuckDB parser 校验是否为单条 SELECT。
+    match = re.search(r"\b(?:WITH|SELECT)\b", text, re.IGNORECASE)
+    return _normalize_sql(text[match.start():]) if match else ""
 
 
 def parse_sql_response(text: str) -> str:
@@ -73,7 +63,8 @@ def parse_sql_response(text: str) -> str:
     try:
         parsed = json.loads(candidate)
         if isinstance(parsed, dict):
-            sql = (parsed.get("sql") or "").strip()
+            value = parsed.get("sql")
+            sql = value.strip() if isinstance(value, str) else ""
             if sql:
                 return _normalize_sql(sql)
     except (json.JSONDecodeError, TypeError):
@@ -86,8 +77,8 @@ def parse_sql_response(text: str) -> str:
     return sql
 
 def _normalize_sql(sql:str) -> str:
-    """SQL标准化，清理换行空格，补末尾分号"""
-    sql = re.sub(r"\s+"," ",sql).strip()
+    """仅清理边界空白，保留字符串、注释与内部换行语义。"""
+    sql = sql.strip()
     if sql and not sql.endswith(";"):
         sql += ";"
     return sql
@@ -130,7 +121,7 @@ def generate_sql(
     field_text = _format_field_docs(field_docs)
     rel_text = _format_relations(relations)
     val_text = _format_value_samples(value_samples)
-    profile_text = user_profile or "无用户偏好"
+    profile_text = (user_profile or "无用户偏好") + "\n当前业务时间：" + business_now() + "。相对日期请转换为日期字面量，不使用 CURRENT_DATE/NOW。"
 
     user_prompt = GENERATE_SQL_USER_TPL.format(
         question=question,
@@ -166,7 +157,7 @@ def generate_repair_sql(
     field_text = _format_field_docs(field_docs)
     rel_text = _format_relations(relations)
     val_text = _format_value_samples(value_samples)
-    profile_text = user_profile or "无用户偏好"
+    profile_text = (user_profile or "无用户偏好") + "\n当前业务时间：" + business_now() + "。相对日期请转换为日期字面量。"
 
     user_prompt = REPAIR_SQL_USER_TPL.format(
         question=question,

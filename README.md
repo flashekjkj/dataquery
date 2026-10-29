@@ -1,5 +1,7 @@
 # AskData —— 自然语言数据查询 Agent
 
+评测入口：首版业务标注集、固定夹具、离线回归及真实模型运行器见 [evaluation/README.md](evaluation/README.md)。正式留出集报告见 [evaluation/report.md](evaluation/report.md)。
+
 新增：支持协调 Agent、查询 Agent 和审核 Agent 的有界串行协作，保留单智能体快速路径。
 前端可选择执行模式并查看任务 SQL、结果和审核记录。架构、使用方式与验证命令见 [MULTI_AGENT.md](MULTI_AGENT.md)。
 

@@ -4,6 +4,8 @@ import sys
 from typing import Optional
 
 from agent.graph import build_graph
+from agent.outcomes import classify_outcome
+from observability.context import request_tokens_var
 from app.config import settings
 from app.model_client import ModelClient
 from memory.conversation import ConversationMemory
@@ -84,20 +86,27 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
       由本函数创建的 trace 在返回前 flush（HTTP 场景的 trace 归中间件/路由管理）
     """
     owned_trace = current_trace() is None
+    usage_token = request_tokens_var.set({"input": 0, "output": 0}) if owned_trace else None
     trace = start_trace(session_id=thread_id)
     handler = GraphCallbackHandler()
     logger.info("Agent调用开始（thread_id={} trace_id={}）", thread_id, trace.trace_id)
-    final_state = graph.invoke(initial_agent_state(user_question, forced_skill, execution_mode),
-        config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64,
-                "callbacks": [handler]},
-    )
+    try:
+        final_state = graph.invoke(initial_agent_state(user_question, forced_skill, execution_mode),
+            config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64,
+                    "callbacks": [handler]},
+        )
+    finally:
+        if owned_trace:
+            end_trace()
+            request_tokens_var.reset(usage_token)
 
     route = final_state.get("route") or "data"
     field_docs = final_state.get("field_docs") or []
     attempts_log = final_state.get("attempts_log") or []
 
     result = {
-        "success": bool(final_state.get("success")) if route == "data" else True,
+        "success": classify_outcome(final_state) == "success",
+        "outcome": classify_outcome(final_state),
         "route": route,
         "user_question": user_question,
         "rewritten_question": final_state.get("rewritten_question"),
@@ -114,6 +123,4 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
         "task_results": final_state.get("task_results") or [],
         "trace_id": trace.trace_id,
     }
-    if owned_trace:
-        end_trace()
     return result

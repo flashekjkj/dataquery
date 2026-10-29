@@ -4,6 +4,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from agent.state import AskDataState
 from agent.nodes import build_nodes
 from agent.supervisor import build_collaboration_nodes
+from agent.policies import should_repair_sql
 
 def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3, skill_registry=None, mcp_manager=None):
     """
@@ -69,13 +70,7 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         4. success=False 且 次数耗尽 → answer_node，返回失败提示
         注意：attempts在repair_node中+1，路由时 attempts+1 = 已执行的总尝试次数
         """
-        if state["success"]:
-            return "answer_node"
-        if state.get("llm_error"):
-            return "answer_node"
-        if state["attempts"] + 1 < max_attempts:
-            return "repair_node"
-        return "answer_node"
+        return "repair_node" if should_repair_sql(state, max_attempts) else "answer_node"
 
     def has_tool_call_router(state:AskDataState) -> str:
         """工具规划后的分支：选出了工具→执行；没选出→降级闲聊回答"""

@@ -17,6 +17,12 @@ from prometheus_client import Counter, Histogram
 
 METRICS_PREFIX = "askdata"
 
+chat_outcomes_total = Counter("askdata_chat_outcomes_total", "业务结果（与HTTP完成分开）", ["outcome"])
+
+
+def record_chat_outcome(outcome):
+    chat_outcomes_total.labels(outcome=outcome).inc()
+
 # ===== HTTP 层 =====
 http_requests_total = Counter(
     f"{METRICS_PREFIX}_http_requests_total",
