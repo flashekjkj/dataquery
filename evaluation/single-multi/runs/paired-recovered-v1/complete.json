@@ -1,0 +1,11 @@
+{
+  "records": 48,
+  "source_unchanged": false,
+  "production_source_unchanged": true,
+  "audit": "manual post-run hash audit; runner assertion failed on test file only",
+  "changed_files": [
+    "backend/test/test.py"
+  ],
+  "test_hash_at_end": "3edb856b5d30acb5295ff943e4a18fdc42a9f7d9990aff46663bab36b8b63599",
+  "note": "Source manifest not silently reset after completion; see resume-provenance.json"
+}

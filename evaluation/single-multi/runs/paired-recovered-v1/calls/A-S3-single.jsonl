@@ -1,0 +1,4 @@
+{"operation": "route", "ok": true, "duration_ms": 3814.885800005868, "usage": {"input_tokens": 204, "output_tokens": 123, "total_tokens": 327}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "embedding", "ok": true, "duration_ms": 559.6784999943338, "usage": {"input_tokens": 31, "output_tokens": 0, "total_tokens": 31}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "generate_sql", "ok": true, "duration_ms": 8434.233100007987, "usage": {"input_tokens": 1028, "output_tokens": 347, "total_tokens": 1375}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "answer", "ok": true, "duration_ms": 4546.166699990863, "usage": {"input_tokens": 427, "output_tokens": 192, "total_tokens": 619}, "retries": 0, "error": null, "fatal_provider_error": false}

@@ -1,0 +1,6 @@
+{"operation": "route", "ok": true, "duration_ms": 2527.4695999978576, "usage": {"input_tokens": 185, "output_tokens": 63, "total_tokens": 248}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": true, "duration_ms": 7839.457299996866, "usage": {"input_tokens": 1649, "output_tokens": 333, "total_tokens": 1982}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "embedding", "ok": true, "duration_ms": 879.5549999922514, "usage": {"input_tokens": 141, "output_tokens": 0, "total_tokens": 141}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "generate_sql", "ok": true, "duration_ms": 10208.678900002269, "usage": {"input_tokens": 1049, "output_tokens": 398, "total_tokens": 1447}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "review", "ok": true, "duration_ms": 11069.315900007496, "usage": {"input_tokens": 1968, "output_tokens": 479, "total_tokens": 2447}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "supervisor_summary", "ok": true, "duration_ms": 8885.276899993187, "usage": {"input_tokens": 693, "output_tokens": 343, "total_tokens": 1036}, "retries": 0, "error": null, "fatal_provider_error": false}

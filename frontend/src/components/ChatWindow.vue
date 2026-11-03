@@ -7,11 +7,10 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   skills: { type: Array, default: () => [] },
   forcedSkill: { type: String, default: '' },
-  executionMode: { type: String, default: 'auto' },
 })
 
 // 子组件不直接改父组件状态，而是向上emit事件（Vue单向数据流核心）
-const emit = defineEmits(['send', 'update:forcedSkill', 'update:executionMode'])
+const emit = defineEmits(['send', 'update:forcedSkill'])
 
 const input = ref('')
 const scrollArea = ref(null)
@@ -41,12 +40,7 @@ watch(() => props.messages.length, async () => {
     </div>
 
     <div class="input-bar">
-      <select aria-label="协作模式" :value="executionMode" :disabled="loading"
-              @change="e => emit('update:executionMode', e.target.value)">
-        <option value="auto">自动选择协作模式</option>
-        <option value="single">单智能体</option>
-        <option value="multi">多智能体协作</option>
-      </select>
+      <span class="mode-hint">系统自动选择协作模式</span>
       <select :value="forcedSkill" @change="e => emit('update:forcedSkill', e.target.value)">
         <option value="">🤖 自动匹配技能</option>
         <option v-for="s in skills" :key="s.name" :value="s.name">

@@ -1,0 +1,12 @@
+{"operation": "route", "ok": false, "duration_ms": 5.257099999880666, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": false, "duration_ms": 5.412700000078985, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "rewrite", "ok": false, "duration_ms": 5.995799999936935, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "route", "ok": false, "duration_ms": 5.0317999998696905, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": false, "duration_ms": 4.722899999933361, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "route", "ok": true, "duration_ms": 3711.456100000305, "usage": {"input_tokens": 191, "output_tokens": 93, "total_tokens": 284}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": true, "duration_ms": 12285.21580000006, "usage": {"input_tokens": 1655, "output_tokens": 497, "total_tokens": 2152}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "embedding", "ok": true, "duration_ms": 658.6278999998285, "usage": {"input_tokens": 192, "output_tokens": 0, "total_tokens": 192}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "generate_sql", "ok": false, "duration_ms": 5027.525200000127, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "rewrite", "ok": false, "duration_ms": 5005.696900000203, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "route", "ok": false, "duration_ms": 5007.62050000003, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": false, "duration_ms": 5006.744799999979, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}

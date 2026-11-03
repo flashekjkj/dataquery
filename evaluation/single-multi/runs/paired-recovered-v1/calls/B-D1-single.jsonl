@@ -1,0 +1,11 @@
+{"operation": "route", "ok": false, "duration_ms": 4.297100000030696, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "embedding", "ok": false, "duration_ms": 56.11009999984162, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "route", "ok": true, "duration_ms": 3835.3744000000916, "usage": {"input_tokens": 197, "output_tokens": 86, "total_tokens": 283}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "embedding", "ok": true, "duration_ms": 846.6333000001214, "usage": {"input_tokens": 24, "output_tokens": 0, "total_tokens": 24}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "generate_sql", "ok": true, "duration_ms": 22881.20909999998, "usage": {"input_tokens": 1045, "output_tokens": 785, "total_tokens": 1830}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "answer", "ok": true, "duration_ms": 5681.018600000016, "usage": {"input_tokens": 432, "output_tokens": 191, "total_tokens": 623}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "rewrite", "ok": true, "duration_ms": 8001.784800000223, "usage": {"input_tokens": 384, "output_tokens": 306, "total_tokens": 690}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "route", "ok": true, "duration_ms": 5035.426600000392, "usage": {"input_tokens": 199, "output_tokens": 92, "total_tokens": 291}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "embedding", "ok": true, "duration_ms": 1284.2851999998857, "usage": {"input_tokens": 27, "output_tokens": 0, "total_tokens": 27}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "generate_sql", "ok": true, "duration_ms": 20509.339799999907, "usage": {"input_tokens": 1047, "output_tokens": 565, "total_tokens": 1612}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "answer", "ok": true, "duration_ms": 5229.221300000063, "usage": {"input_tokens": 409, "output_tokens": 134, "total_tokens": 543}, "retries": 0, "error": null, "fatal_provider_error": false}

@@ -133,6 +133,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
             "task_plan": None, "task_results": [], "task_index": 0,
             "review_round": 0, "review_feedback": [], "current_task_result": None,
             "collaboration_status": "single",
+            "fallback_used": False,
             "conversation_context": conversation_context,
             "user_profile": user_profile
         }

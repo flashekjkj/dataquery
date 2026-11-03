@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any,List,Optional,Literal
 
-from pydantic import BaseModel,Field
+from pydantic import BaseModel,Field,ConfigDict
 from agent.contracts import TaskPlan, QueryTaskResult
 
 
@@ -10,7 +10,7 @@ class ChatRequest(BaseModel):
     question:str = Field(...,min_length=1,max_length=2000)
     session_id:Optional[str] = None
     forced_skill:Optional[str] = None
-    execution_mode: Literal["auto", "single", "multi"] = "auto"
+    model_config = ConfigDict(extra="forbid")
 
 class AttemptRecord(BaseModel):
     """SQL自修复单轮尝试记录"""

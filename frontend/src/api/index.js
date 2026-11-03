@@ -16,7 +16,7 @@ async function request(path, options = {}) {
 }
 
 //提问（非流式）：返回完整结果（answer/sql/表格/命中字段/尝试记录）
-export function chat(question, sessionId = null, forcedSkill = null, executionMode = 'auto') {
+export function chat(question, sessionId = null, forcedSkill = null) {
     return request('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -24,7 +24,6 @@ export function chat(question, sessionId = null, forcedSkill = null, executionMo
             question,
             session_id: sessionId,
             forced_skill:forcedSkill,
-            execution_mode: executionMode,
         }),
     })
 }
@@ -50,7 +49,7 @@ export function listSkills() {
 }
 
 //流式提问（SSE）：每收到一个事件就回调onEvent，结束时返回session_id
-export async function chatStream(question,sessionId,forcedSkill,onEvent,executionMode = 'auto') {
+export async function chatStream(question,sessionId,forcedSkill,onEvent) {
     const resp = await fetch(`${BASE}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,7 +57,6 @@ export async function chatStream(question,sessionId,forcedSkill,onEvent,executio
             question,
             session_id: sessionId,
             forced_skill:forcedSkill,
-            execution_mode: executionMode,
         }),
     })
     if (!resp.ok || !resp.body) throw new Error(`请求失败：${resp.status}`)

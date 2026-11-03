@@ -1,0 +1,557 @@
+{
+  "note": "历史成功SQL匹配参考事实不证明整个子任务语义正确；这不是审核precision/recall，也不计为最终交付。",
+  "records": [
+    {
+      "key": "A-S1-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "A-S2-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "A-S3-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "A-C1-multi",
+      "historical_reference_matches": [
+        false,
+        false
+      ],
+      "initial_version_matches": [
+        false,
+        false
+      ],
+      "final_matches": [
+        false,
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    },
+    {
+      "key": "A-C2-multi",
+      "historical_reference_matches": [
+        true,
+        true,
+        true
+      ],
+      "initial_version_matches": [
+        true,
+        true,
+        true
+      ],
+      "final_matches": [
+        true,
+        true,
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 3,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        },
+        {
+          "task_id": "T2",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        },
+        {
+          "task_id": "T3",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "A-C3-multi",
+      "historical_reference_matches": [
+        false
+      ],
+      "initial_version_matches": [
+        false
+      ],
+      "final_matches": [
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    },
+    {
+      "key": "A-C4-multi",
+      "historical_reference_matches": [
+        false,
+        false
+      ],
+      "initial_version_matches": [
+        false,
+        false
+      ],
+      "final_matches": [
+        false,
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    },
+    {
+      "key": "A-C5-multi",
+      "historical_reference_matches": [
+        true,
+        true
+      ],
+      "initial_version_matches": [
+        true,
+        true
+      ],
+      "final_matches": [
+        true,
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 2,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        },
+        {
+          "task_id": "T2",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "A-D1-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "A-D2-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-S1-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-S2-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        false
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 2,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "revise",
+              "issues": [
+                "SQL 使用 p.product_id AS \"商品名称\" 并分组 p.product_id，返回的是商品/产品编号而非商品名称，不符合原问题要求返回商品名称",
+                "应查询并分组 p.product_name（商品信息表中的产品名称/商品名称字段），输出商品名称和去重订单数量"
+              ],
+              "clarification": ""
+            },
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-S3-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-C1-multi",
+      "historical_reference_matches": [
+        true,
+        true
+      ],
+      "initial_version_matches": [
+        true,
+        true
+      ],
+      "final_matches": [
+        true,
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 2,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        },
+        {
+          "task_id": "T2",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-C2-multi",
+      "historical_reference_matches": [
+        false,
+        false,
+        false
+      ],
+      "initial_version_matches": [
+        false,
+        false,
+        false
+      ],
+      "final_matches": [
+        false,
+        false,
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    },
+    {
+      "key": "B-C3-multi",
+      "historical_reference_matches": [
+        false
+      ],
+      "initial_version_matches": [
+        false
+      ],
+      "final_matches": [
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "failed",
+          "reviews": []
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-C4-multi",
+      "historical_reference_matches": [
+        false,
+        false
+      ],
+      "initial_version_matches": [
+        false,
+        false
+      ],
+      "final_matches": [
+        false,
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    },
+    {
+      "key": "B-C5-multi",
+      "historical_reference_matches": [
+        false,
+        false
+      ],
+      "initial_version_matches": [
+        false,
+        false
+      ],
+      "final_matches": [
+        false,
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    },
+    {
+      "key": "B-D1-multi",
+      "historical_reference_matches": [
+        true
+      ],
+      "initial_version_matches": [
+        true
+      ],
+      "final_matches": [
+        true
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 1,
+      "reviews": [
+        {
+          "task_id": "T1",
+          "status": "approved",
+          "reviews": [
+            {
+              "verdict": "approve",
+              "issues": [],
+              "clarification": ""
+            }
+          ]
+        }
+      ],
+      "replay_errors": []
+    },
+    {
+      "key": "B-D2-multi",
+      "historical_reference_matches": [
+        false
+      ],
+      "initial_version_matches": [
+        false
+      ],
+      "final_matches": [
+        false
+      ],
+      "lost_known_fact_indices": [],
+      "review_count": 0,
+      "reviews": [],
+      "replay_errors": []
+    }
+  ]
+}

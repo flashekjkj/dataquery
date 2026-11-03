@@ -219,16 +219,46 @@ class CollaborationTests(unittest.TestCase):
         with TestClient(app) as http:
             invalid = http.post("/api/chat", json={"question": "test", "execution_mode": "wrong"})
             self.assertEqual(invalid.status_code, 422)
-            response = http.post("/api/chat", json={"question": "统计客户", "execution_mode": "multi"})
+            response = http.post("/api/chat", json={"question": "分别统计客户"})
             self.assertEqual(response.status_code, 200)
             self.assertTrue(response.json()["success"])
             self.assertEqual(len(response.json()["task_results"]), 1)
-            stream = http.post("/api/chat/stream", json={"question": "统计客户", "execution_mode": "multi"})
+            stream = http.post("/api/chat/stream", json={"question": "分别统计客户"})
             events = [json.loads(line[6:]) for line in stream.text.splitlines() if line.startswith("data: ")]
             self.assertFalse(any(event["type"] == "error" for event in events), events)
             self.assertEqual(events[-1]["type"], "done")
             self.assertTrue(any(event.get("node") == "review_agent_node" for event in events))
             self.assertTrue(any(event.get("task_results") for event in events))
+
+    def test_auto_single_failure_upgrades_once_and_resets_next_turn(self):
+        client = TeamClient(sql=["SELECT missing FROM customers"] * 3 +
+                                ["SELECT COUNT(*) AS total FROM customers"])
+        graph = self.build(client)
+        result = ask_data_agent(graph, "统计客户", "auto-session")
+        self.assertTrue(result["success"])
+        self.assertEqual(client.plan_calls, 1)
+        self.assertEqual(client.generate_calls, 4)
+        self.assertEqual(len(self.memory.load("auto-session")["turns"]), 2)
+        again = ask_data_agent(graph, "统计客户", "auto-session")
+        self.assertTrue(again["success"])
+        self.assertEqual(again["collaboration_status"], "single")
+        self.assertEqual(client.plan_calls, 1)
+
+    def test_auto_unknown_defaults_single_and_failed_upgrade_stops(self):
+        client = TeamClient()
+        result = self.ask(client, question="客户数是多少", mode="auto")
+        self.assertTrue(result["success"])
+        self.assertEqual(client.plan_calls, 0)
+        client = TeamClient(sql=["SELECT missing FROM customers"])
+        result = self.ask(client, mode="auto")
+        self.assertFalse(result["success"])
+        self.assertEqual(client.plan_calls, 1)
+
+    def test_auto_invalid_plan_uses_single(self):
+        client = TeamClient(plan="invalid")
+        result = self.ask(client, question="分别统计客户", mode="auto")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["collaboration_status"], "single")
 
     def test_plan_contract_rejects_unsafe_task_graphs(self):
         bad_plans = [

@@ -10,7 +10,6 @@ const messages = ref([])
 const loading = ref(false)
 const skills = ref([])
 const forcedSkill = ref('')
-const executionMode = ref('auto')
 
 async function refreshSessions() {
   sessions.value = await listSessions()
@@ -49,7 +48,7 @@ async function send(question) {
   messages.value.push({ role: 'user', content: question })
   loading.value = true
   try {
-    const r = await chat(question, currentSessionId.value, forcedSkill.value || null, executionMode.value)
+    const r = await chat(question, currentSessionId.value, forcedSkill.value || null)
     currentSessionId.value = r.session_id
     messages.value.push({
       role: 'assistant',
@@ -97,10 +96,8 @@ onMounted(() => {
         :loading="loading"
         :skills="skills"
         :forced-skill="forcedSkill"
-        :execution-mode="executionMode"
         @send="send"
         @update:forced-skill="v => (forcedSkill = v)"
-        @update:execution-mode="v => (executionMode = v)"
       />
     </main>
   </div>

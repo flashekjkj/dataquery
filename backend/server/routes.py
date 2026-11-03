@@ -39,7 +39,6 @@ def chat(req:ChatRequest,request:Request):
             req.question,
             session_id,
             forced_skill=req.forced_skill,
-            execution_mode=req.execution_mode,
         )
     except LLMCallError as e:
         record_chat_outcome("failed")
@@ -104,7 +103,7 @@ async def chat_stream(req:ChatRequest,request:Request):
     graph = request.app.state.graph
 
     async def event_generator():
-        initial_state = initial_agent_state(req.question, req.forced_skill, req.execution_mode)
+        initial_state = initial_agent_state(req.question, req.forced_skill)
         handler = GraphCallbackHandler()
         config = {"configurable": {"thread_id": session_id}, "recursion_limit": 64,
                   "callbacks": [handler]}

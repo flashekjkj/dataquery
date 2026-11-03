@@ -1,0 +1,7 @@
+{
+  "A-S2-multi": {
+    "reason": "Embedding SDK exception bypassed ModelClient._record_call; worker log proves provider Arrearage",
+    "evidence": "main-worker.log: first Query agent failed for T1 traceback ends in OpenAI BadRequestError Arrearage",
+    "annotation_type": "manual service availability audit; no business correctness labels changed"
+  }
+}

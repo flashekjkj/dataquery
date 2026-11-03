@@ -1,0 +1,2 @@
+{"operation": "route", "ok": true, "duration_ms": 3352.0471999945585, "usage": {"input_tokens": 179, "output_tokens": 63, "total_tokens": 242}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": true, "duration_ms": 22174.09340001177, "usage": {"input_tokens": 1643, "output_tokens": 842, "total_tokens": 2485}, "retries": 0, "error": null, "fatal_provider_error": false}

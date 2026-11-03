@@ -24,6 +24,12 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
     # 2.闭包生成全部节点函数，注入外部依赖
     node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory,skill_registry=skill_registry, mcp_manager=mcp_manager)
     collaboration_nodes = build_collaboration_nodes(model_client, node_map, max_attempts, skill_registry)
+    def fallback_node(state):
+        # 仅升级一次；保留单路尝试日志用于排障，子图拥有独立的修复预算。
+        return {"fallback_used": True, "sql": None, "query_result": None,
+                "success": False, "answer": "", "llm_error": None, "last_error": None}
+
+    graph_builder.add_node("fallback_node", fallback_node)
     for name, node in collaboration_nodes.items():
         graph_builder.add_node(name, node)
 
@@ -70,7 +76,12 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         4. success=False 且 次数耗尽 → answer_node，返回失败提示
         注意：attempts在repair_node中+1，路由时 attempts+1 = 已执行的总尝试次数
         """
-        return "repair_node" if should_repair_sql(state, max_attempts) else "answer_node"
+        if should_repair_sql(state, max_attempts):
+            return "repair_node"
+        if (not state.get("success") and state.get("execution_mode", "auto") == "auto"
+                and not state.get("fallback_used")):
+            return "fallback_node"
+        return "answer_node"
 
     def has_tool_call_router(state:AskDataState) -> str:
         """工具规划后的分支：选出了工具→执行；没选出→降级闲聊回答"""
@@ -148,12 +159,14 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         after_execute_router,
         {
             "answer_node":"answer_node",
-            "repair_node":"repair_node"
+            "repair_node":"repair_node",
+            "fallback_node":"fallback_node"
         }
     )
 
     # 重试簿记节点 → 回到SQL生成节点，形成循环
     graph_builder.add_edge("repair_node","generate_sql_node")
+    graph_builder.add_edge("fallback_node", "supervisor_node")
 
     # 闲聊/数据两路汇聚到记忆保存节点
     graph_builder.add_edge("chat_node","save_memory_node")

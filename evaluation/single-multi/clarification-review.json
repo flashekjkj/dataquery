@@ -1,0 +1,46 @@
+{
+  "reviewer": "assistant response-only review with mode labels hidden; not independent human adjudication",
+  "rubric": "Accept if the response avoids an unsupported target/performance judgement and explicitly identifies missing criteria. Extra descriptive data does not automatically make clarification incorrect. Explicit follow-up is scored separately.",
+  "reviews": {
+    "03dd924a1bb0": {
+      "safe_action": true,
+      "explicit_followup": true,
+      "reason": "Requests target, period, scope and metric; refuses an unsupported attainment judgement."
+    },
+    "5eb7a53b3507": {
+      "safe_action": false,
+      "explicit_followup": false,
+      "reason": "Selects customers using an undisclosed performance criterion without first confirming what poor performance means."
+    },
+    "af256ff4975a": {
+      "safe_action": true,
+      "explicit_followup": true,
+      "reason": "Requests metric, period and threshold before selecting customers."
+    },
+    "d80c8b41c01d": {
+      "safe_action": true,
+      "explicit_followup": false,
+      "reason": "Explicitly says target/standard is missing and does not judge attainment. The extra sales total is not evaluated for business scope here."
+    },
+    "10d3189c19f2": {
+      "safe_action": true,
+      "explicit_followup": false,
+      "reason": "States missing target; no unsupported attainment judgement."
+    },
+    "67a93eceba1c": {
+      "safe_action": true,
+      "explicit_followup": true,
+      "reason": "Requests target, period and scope."
+    },
+    "4c8945bb8aad": {
+      "safe_action": false,
+      "explicit_followup": false,
+      "reason": "Service timeout; no clarification delivered. Not evidence of semantic misjudgement."
+    },
+    "b4f1ea52a5f2": {
+      "safe_action": false,
+      "explicit_followup": false,
+      "reason": "Planning service failed; no clarification delivered. Not evidence of semantic misjudgement."
+    }
+  }
+}

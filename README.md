@@ -3,6 +3,8 @@
 评测入口：首版业务标注集、固定夹具、离线回归及真实模型运行器见 [evaluation/README.md](evaluation/README.md)。正式留出集报告见 [evaluation/report.md](evaluation/report.md)。
 
 新增：支持协调 Agent、查询 Agent 和审核 Agent 的有界串行协作，保留单智能体快速路径。
+
+用户入口统一自动路由：有明确复杂任务信号时使用多智能体，其余默认单智能体；单智能体耗尽SQL修复次数仍失败后，升级一次多智能体。规划无法解析时先回退单路尝试，升级后不再循环切换。前端和CLI不提供模式选择，HTTP请求不接受execution_mode字段（返回422）。内部模式参数仅保留给离线评测与回归测试。
 前端可选择执行模式并查看任务 SQL、结果和审核记录。架构、使用方式与验证命令见 [MULTI_AGENT.md](MULTI_AGENT.md)。
 
 一个基于 LangGraph 的 Text2SQL 数据问答系统：用户用自然语言提问（如"华东地区上月销售额多少"），Agent 自动完成 **Schema 检索 → SQL 生成 → 只读执行 → 失败自修复 → 自然语言回答** 的全链路，并支持多轮对话记忆、技能系统与 MCP 工具生态。

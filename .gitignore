@@ -34,7 +34,18 @@ node_modules/
 /evaluation/offline-tests.log
 /evaluation/runs/**/memory/
 /evaluation/runs/**/traces/
+/evaluation/single-multi/runs/**/memory/
+/evaluation/single-multi/runs/**/traces/
+/evaluation/single-multi/*worker.log
 *.duckdb.wal
+*.log
+dist/
+.pytest_cache/
+.ruff_cache/
+/evaluation/single-multi/progress.md
+/evaluation/single-multi/runs/paired-main/
+/evaluation/single-multi/runs/paired-v1/
+/evaluation/single-multi/runs/**/analysis.json
 
 /backend/data/logs/
 /backend/data/traces/

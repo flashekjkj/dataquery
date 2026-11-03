@@ -24,7 +24,7 @@ def should_collaborate(question, mode):
         return True
     if mode == "single":
         return False
-    # 无模型开销的保守入口；也可在 UI/API 显式选择 multi。
+    # 明确的复杂任务信号才协作；其余（含无法判断）默认单路。
     return bool(re.search(r"分析|归因|为什么|原因|贡献|分别|同时|并且|以及|并找|对比.*再", question))
 
 
@@ -37,7 +37,7 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
 
     def plan_node(state):
         question = state.get("rewritten_question") or state["user_question"]
-        if not should_collaborate(question, state.get("execution_mode", "auto")):
+        if not state.get("fallback_used") and not should_collaborate(question, state.get("execution_mode", "auto")):
             return {"collaboration_status": "single"}
         try:
             response = client.llm_invoke(prompt=json.dumps({
@@ -50,8 +50,10 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
             plan = parse_contract(TaskPlan, response.content)
         except Exception:
             logger.exception("Supervisor planning failed")
+            if state.get("execution_mode", "auto") == "auto" and not state.get("fallback_used"):
+                return {"collaboration_status": "single"}
             return {"collaboration_status": "failed", "success": False,
-                    "answer": "任务规划失败：模型未返回有效计划或服务不可用，请重试或选择单智能体模式。"}
+                    "answer": "任务规划失败：模型未返回有效计划或服务不可用，请稍后重试。"}
         return {"task_plan": plan.model_dump(), "task_results": [], "task_index": 0,
                 "review_round": 0, "review_feedback": [], "current_task_result": None,
                 "collaboration_status": "clarification" if plan.clarification else "running",

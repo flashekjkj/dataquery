@@ -1,0 +1,7 @@
+{
+  "retained_records": 40,
+  "rerun_reason": "sandbox denied API network; all eight calls failed immediately",
+  "source_change": "backend/test/test.py only; user test file, no production changes",
+  "previous_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "current_sha256": "f1c88bb67011304e3397ee8069df4da36be70b59df110531b9ceb2056f8c0c72"
+}

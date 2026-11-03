@@ -1,0 +1,4 @@
+{"operation": "route", "ok": false, "duration_ms": 5.16379999999117, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": false, "duration_ms": 5.483099999992191, "usage": {}, "retries": 0, "error": "connection", "fatal_provider_error": false}
+{"operation": "route", "ok": true, "duration_ms": 5916.890299999977, "usage": {"input_tokens": 179, "output_tokens": 94, "total_tokens": 273}, "retries": 0, "error": null, "fatal_provider_error": false}
+{"operation": "supervisor_plan", "ok": true, "duration_ms": 18089.370600000166, "usage": {"input_tokens": 1643, "output_tokens": 575, "total_tokens": 2218}, "retries": 0, "error": null, "fatal_provider_error": false}
