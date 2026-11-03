@@ -1,0 +1,2 @@
+{"id": "stale-added", "question": "新增字段后旧上下文拒绝执行", "reference_sql": "SELECT COUNT(*) FROM orders", "mutation_sql": ["ALTER TABLE orders ADD COLUMN note VARCHAR"], "expected_action": "stale"}
+{"id": "stale-renamed", "question": "字段改名后旧上下文失效", "reference_sql": "SELECT SUM(net_receipt) FROM payments", "mutation_sql": ["ALTER TABLE payments RENAME COLUMN net_receipt TO amount"], "expected_action": "stale"}

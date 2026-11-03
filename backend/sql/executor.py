@@ -5,6 +5,7 @@ import duckdb
 from threading import Timer
 from pydantic import BaseModel
 from typing import List,Any
+from uuid import UUID
 
 def _json_safe(value:Any) -> Any:
     """把DuckDB返回的特殊类型(DECIMAL/DATE/DATETIME等)转为JSON可序列化的原生类型"""
@@ -12,6 +13,14 @@ def _json_safe(value:Any) -> Any:
         return float(value)
     if isinstance(value,(datetime,date)):
         return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, (bytes, memoryview)):
+        return bytes(value).hex()
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k,v in value.items()}
     return value
 
 class QueryResult(BaseModel):

@@ -1,0 +1,4 @@
+{"id": "split-total", "question": "实收金额", "reference_sql": "SELECT SUM(net_receipt) FROM payments", "expected_tables": ["\"main\".\"payments\""]}
+{"id": "split-join", "question": "每天实收金额", "reference_sql": "SELECT o.created,SUM(p.net_receipt) FROM payments p JOIN orders o ON p.order_id=o.id GROUP BY o.created", "expected_tables": ["\"main\".\"orders\"", "\"main\".\"payments\""], "expected_edges": [["\"main\".\"orders\"", "\"main\".\"payments\""]]}
+{"id": "old-column", "question": "旧字段不可用", "reference_sql": "SELECT paid_amount FROM payments", "expected_action": "deny"}
+{"id": "wrong-join", "question": "错误关联", "reference_sql": "SELECT * FROM payments p JOIN orders o ON p.id=o.id", "expected_action": "deny"}

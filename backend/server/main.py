@@ -24,8 +24,11 @@ async def lifespan(app:FastAPI):
     app.state.conv_memory = conv_memory
     app.state.skill_registry = skill_registry
     logger.info("Agent就绪，等待请求")
-    yield
-    logger.info("服务关闭")
+    try:
+        yield
+    finally:
+        graph.datasource_registry.close()
+        logger.info("服务关闭")
 
 app = FastAPI(title="AskData API",version="0.1.0",lifespan=lifespan)
 

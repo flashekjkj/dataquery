@@ -6,7 +6,7 @@ from agent.nodes import build_nodes
 from agent.supervisor import build_collaboration_nodes
 from agent.policies import should_repair_sql
 
-def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3, skill_registry=None, mcp_manager=None):
+def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_attempts:int = 3, skill_registry=None, mcp_manager=None, query_context=None):
     """
     构建并编译LangGraph Text2SQL自修复Agent图
     :param model_client: LLM客户端实例
@@ -18,12 +18,20 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
     :return: compiled_graph: 编译完成的langgraph可执行图
     """
 
+    from datasources.demo import demo_query_context
+    query_context = query_context or getattr(hybrid, "query_context", None) or demo_query_context()
+    indexed_context = getattr(hybrid, "query_context", None)
+    if indexed_context and indexed_context.snapshot.version != query_context.snapshot.version:
+        raise ValueError("检索索引与QueryContext不一致，请为当前数据源重建索引")
+    if hasattr(executor, "config") and executor.config.source_id != query_context.source_id:
+        raise ValueError("连接器与QueryContext数据源不一致")
+
     # 1.实例化状态图
     graph_builder = StateGraph(AskDataState)
 
     # 2.闭包生成全部节点函数，注入外部依赖
-    node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory,skill_registry=skill_registry, mcp_manager=mcp_manager)
-    collaboration_nodes = build_collaboration_nodes(model_client, node_map, max_attempts, skill_registry)
+    node_map = build_nodes(model_client,hybrid,executor,conv_memory,long_term_memory,skill_registry=skill_registry, mcp_manager=mcp_manager, query_context=query_context)
+    collaboration_nodes = build_collaboration_nodes(model_client, node_map, max_attempts, skill_registry, query_context,hybrid)
     def fallback_node(state):
         # 仅升级一次；保留单路尝试日志用于排障，子图拥有独立的修复预算。
         return {"fallback_used": True, "sql": None, "query_result": None,
@@ -179,6 +187,15 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
     checkpointer = MemorySaver()
     compiled_graph = graph_builder.compile(checkpointer=checkpointer)
 
+    from contextlib import nullcontext,contextmanager
+    @contextmanager
+    def query_session():
+        current=getattr(executor,'context',None)
+        if current and current.model_dump()!=query_context.model_dump():
+            raise ValueError('Policy、语义或Schema已变化，请重建Agent与索引')
+        with getattr(executor,'query_session',nullcontext)() as session:
+            yield session
+    compiled_graph.query_session = query_session
     return compiled_graph
 
 def export_mermaid_diagram(graph,save_path:str = "agent_graph.mmd"):

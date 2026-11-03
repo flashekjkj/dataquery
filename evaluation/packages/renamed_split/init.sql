@@ -1,0 +1,4 @@
+CREATE TABLE orders(id INTEGER PRIMARY KEY, created DATE);
+    CREATE TABLE payments(id INTEGER PRIMARY KEY, order_id INTEGER, net_receipt DECIMAL(12,2));
+    INSERT INTO orders VALUES(1,'2026-11-01'),(2,'2026-11-02');
+    INSERT INTO payments VALUES(1,1,30),(2,2,70);

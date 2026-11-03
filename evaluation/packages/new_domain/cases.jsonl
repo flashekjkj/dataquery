@@ -1,0 +1,2 @@
+{"id": "offers", "question": "offer数量", "reference_sql": "SELECT COUNT(*) FROM applications WHERE stage='offer'", "expected_tables": ["\"main\".\"applications\""]}
+{"id": "job-path", "question": "岗位申请数", "reference_sql": "SELECT j.title,COUNT(*) FROM applications a JOIN jobs j ON a.job_id=j.id GROUP BY j.title", "expected_tables": ["\"main\".\"jobs\"", "\"main\".\"applications\""], "expected_edges": [["\"main\".\"jobs\"", "\"main\".\"applications\""]]}

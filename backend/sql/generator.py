@@ -108,6 +108,17 @@ def _format_value_samples(value_samples:Dict[str,List[Any]]) -> str:
         lines.append(f"- {key}: {samples}")
     return "\n".join(lines)
 
+def semantic_prompt(context, question, docs):
+    tables={d.table_name for d in docs}
+    metrics={k:v for k,v in context.semantics.get('metrics',{}).items() if set(v['tables'])<=tables}
+    selected=sorted(metrics,key=lambda k:(k not in question,k))[:4]
+    return "\n业务语义（命中指标必须遵守表达式、过滤条件、时间口径；JOIN只能使用批准的键和粒度）：" + json.dumps({
+        'metrics':{k:metrics[k] for k in selected},
+        'joins':{k:v for k,v in context.semantics.get('joins',{}).items() if {v['left'],v['right']}<=tables},
+        'time_fields':{k:v for k,v in context.semantics.get('time_fields',{}).items() if k in tables},
+        'policy_version':context.policy_version,'semantic_version':context.semantic_version},ensure_ascii=False)
+
+
 def generate_sql(
         question:str,
         field_docs:List[Any],
@@ -115,7 +126,8 @@ def generate_sql(
         value_samples:Dict[str,List[Any]],
         model_client:ModelClient,
         user_profile:str = "",
-        skill_instructions: str = ""
+        skill_instructions: str = "",
+        query_context=None
 ) -> str:
     """组prompt -> llm调用 -> extract_sql提取SQL"""
     field_text = _format_field_docs(field_docs)
@@ -123,7 +135,8 @@ def generate_sql(
     val_text = _format_value_samples(value_samples)
     profile_text = (user_profile or "无用户偏好") + "\n当前业务时间：" + business_now() + "。相对日期请转换为日期字面量，不使用 CURRENT_DATE/NOW。"
 
-    user_prompt = GENERATE_SQL_USER_TPL.format(
+    dialect = "PostgreSQL" if query_context and query_context.dialect == "postgres" else "DuckDB"
+    user_prompt = GENERATE_SQL_USER_TPL.replace("DuckDB", dialect).format(
         question=question,
         user_profile=profile_text,
         field_docs_text=field_text,
@@ -132,8 +145,13 @@ def generate_sql(
     )
 
     system_prompt=GENERATE_SQL_SYSTEM_PROMPT
+    if query_context and query_context.dialect == "postgres":
+        system_prompt = system_prompt.replace("DuckDB", "PostgreSQL")
+    if query_context:
+        user_prompt += "\n查询上下文：" + json.dumps({"source_id": query_context.source_id, "dialect": query_context.dialect, "schema_version": query_context.snapshot.version}) + "\nSQL必须使用目录中的表限定名和当前方言。"
+        user_prompt += semantic_prompt(query_context,question,field_docs)
     if skill_instructions:
-        system_prompt = GENERATE_SQL_SYSTEM_PROMPT + f"\n\n【当前技能要求】\n{skill_instructions}"
+        system_prompt = system_prompt + f"\n\n【当前技能要求】\n{skill_instructions}"
     resp = model_client.llm_invoke(
         prompt=user_prompt,
         system_prompt=system_prompt,
@@ -151,7 +169,8 @@ def generate_repair_sql(
         error_msg:Optional[str],
         model_client:ModelClient,
         user_profile:str = "",
-        skill_instructions: str = ""
+        skill_instructions: str = "",
+        query_context=None
 ) -> str:
     """组修复prompt -> llm调用 -> extract_sql提取修复后的SQL"""
     field_text = _format_field_docs(field_docs)
@@ -159,7 +178,8 @@ def generate_repair_sql(
     val_text = _format_value_samples(value_samples)
     profile_text = (user_profile or "无用户偏好") + "\n当前业务时间：" + business_now() + "。相对日期请转换为日期字面量。"
 
-    user_prompt = REPAIR_SQL_USER_TPL.format(
+    dialect = "PostgreSQL" if query_context and query_context.dialect == "postgres" else "DuckDB"
+    user_prompt = REPAIR_SQL_USER_TPL.replace("DuckDB", dialect).format(
         question=question,
         user_profile=profile_text,
         field_docs_text=field_text,
@@ -171,8 +191,13 @@ def generate_repair_sql(
 
 
     system_prompt=REPAIR_SQL_SYSTEM_PROMPT
+    if query_context:
+        user_prompt += "\n查询上下文：" + json.dumps({"source_id": query_context.source_id, "dialect": query_context.dialect, "schema_version": query_context.snapshot.version})
+        user_prompt += semantic_prompt(query_context,question,field_docs)
+    if query_context and query_context.dialect == "postgres":
+        system_prompt = system_prompt.replace("DuckDB", "PostgreSQL")
     if skill_instructions:
-        system_prompt = REPAIR_SQL_SYSTEM_PROMPT + f"\n\n【当前技能要求】\n{skill_instructions}"
+        system_prompt = system_prompt + f"\n\n【当前技能要求】\n{skill_instructions}"
     resp = model_client.llm_invoke(
         prompt=user_prompt,
         system_prompt=system_prompt,
@@ -188,41 +213,27 @@ def generate_sql_with_repair(
         value_samples:Dict[str,List[Any]],
         model_client:ModelClient,
         executor:SQLExecutor,
-        max_attempts:int = 3
+        max_attempts:int = 3,
+        query_context=None
 ) -> SqlGenerateResult:
     """
     带自动修复循环：生成 -> 执行 -> 报错回灌修复prompt，最多max_attempts次
     返回包含每一轮attempt记录，失败不编造结果
     """
+    if query_context is None and hasattr(executor, "inspect_schema"):
+        from datasources.models import QueryContext
+        query_context = QueryContext(snapshot=executor.inspect_schema())
     attempts:List[AttemptRecord] = []
     final_result:Optional[QueryResult] = None
     final_sql:Optional[str] = None
 
     for attempt_idx in range(max_attempts):
         if attempt_idx == 0:
-            sql = generate_sql(question,field_docs,relations,value_samples,model_client)
+            sql = generate_sql(question,field_docs,relations,value_samples,model_client,query_context=query_context)
         else:
-            field_text = _format_field_docs(field_docs)
-            rel_text = _format_relations(relations)
-            val_text = _format_value_samples(value_samples)
             last_attempt = attempts[-1]
-
-            user_prompt = REPAIR_SQL_USER_TPL.format(
-                question=question,
-                user_profile="无用户偏好",
-                field_docs_text=field_text,
-                relations_text=rel_text,
-                value_samples_text=val_text,
-                old_sql=last_attempt.sql,
-                error_msg=last_attempt.error
-            )
-            resp = model_client.llm_invoke(
-                prompt=user_prompt,
-                system_prompt=REPAIR_SQL_SYSTEM_PROMPT,
-                operation="repair_sql",
-                json_mode=settings.LLM_JSON_MODE,
-            )
-            sql=parse_sql_response(resp.content)
+            sql = generate_repair_sql(question,field_docs,relations,value_samples,
+                last_attempt.sql,last_attempt.error,model_client,query_context=query_context)
 
         if not sql:
             attempts.append(AttemptRecord(sql=sql,error="extract_sql未能提取到SQL"))

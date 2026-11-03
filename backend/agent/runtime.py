@@ -16,16 +16,14 @@ from observability.tracer import (
     configure_trace_dir, start_trace, end_trace, current_trace, GraphCallbackHandler,
 )
 from retrieval.service import build_hybrid_index
-from sql.executor import SQLExecutor
 from skill.registry import SkillRegistry
 from mcp_client.manager import MCPToolManager
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "data" / "demo_ecom.duckdb"
 DATA_DIR = BASE_DIR / "data"
 
 
-def build_agent(max_attempts: int = 3):
+def build_agent(max_attempts: int = 3, source_config=None):
     """
     构建Agent全链路：模型客户端 + 混合检索 + SQL执行器 + 两种记忆 + 技能注册表 + LangGraph图
     返回 (graph, conv_memory,skill_registry)：图用于问答，conv_memory用于CLI展示会话历史
@@ -41,30 +39,47 @@ def build_agent(max_attempts: int = 3):
 
     model_client = ModelClient(mock=False)
     logger.info("正在构建混合检索索引（对所有字段文档生成embedding）...")
-    hybrid = build_hybrid_index(model_client)
-    executor = SQLExecutor(str(DB_PATH))
-    conv_memory = ConversationMemory(data_root=DATA_DIR)
-    long_term_memory = LongTermMemoryStore(data_root=DATA_DIR)
-    skill_registry = SkillRegistry(DATA_DIR / "skills")
-    # MCP工具管理器：接入calculator演示server（第四步技能联动时按skill声明过滤工具）
-    mcp_manager = MCPToolManager(
-        servers=[
-            {
-                "name": "calculator",
-                "command": sys.executable,
-                "args": [str(BASE_DIR / "mcp_client" / "demo_servers" / "calculator_server.py")],
-            }
-        ]
-    )
-    graph = build_graph(
-        model_client, hybrid, executor,
-        conv_memory, long_term_memory,
-        max_attempts=max_attempts,
-        skill_registry=skill_registry,
-        mcp_manager=mcp_manager
-    )
-    logger.info("Agent构建完成")
-    return graph, conv_memory, skill_registry
+    from datasources import DataSourceRegistry
+    registry = DataSourceRegistry()
+    from datasources.config import load_source_config
+    source_config = source_config or load_source_config()
+    try:
+        executor = registry.register(source_config)
+        query_context = registry.context(source_config.source_id)
+        from retrieval.cache import VectorCache
+        hybrid = build_hybrid_index(model_client, query_context, cache=VectorCache(DATA_DIR/"cache/schema_vectors.sqlite"))
+        from datasources.secured import version
+        isolation=version([query_context.snapshot.version,query_context.policy_version,query_context.semantic_version,
+            source_config.path, source_config.url.get_secret_value() if source_config.url else None])
+        memory_dir = DATA_DIR / "sources" / source_config.source_id / isolation
+        conv_memory = ConversationMemory(data_root=memory_dir)
+        long_term_memory = LongTermMemoryStore(data_root=memory_dir)
+        # 现有技能写死电商表名，不应自动注入新数据源。
+        skill_registry = SkillRegistry(DATA_DIR / "skills",query_context=query_context)
+        # MCP工具管理器：接入calculator演示server（第四步技能联动时按skill声明过滤工具）
+        mcp_manager = MCPToolManager(
+            servers=[
+                {
+                    "name": "calculator",
+                    "command": sys.executable,
+                    "args": [str(BASE_DIR / "mcp_client" / "demo_servers" / "calculator_server.py")],
+                }
+            ]
+        )
+        graph = build_graph(
+            model_client, hybrid, executor,
+            conv_memory, long_term_memory,
+            max_attempts=max_attempts,
+            skill_registry=skill_registry,
+            mcp_manager=mcp_manager, query_context=query_context
+        )
+        logger.info("Agent构建完成")
+        graph.datasource_registry = registry
+        return graph, conv_memory, skill_registry
+    except Exception:
+        registry.close()
+        raise
+
 
 
 def initial_agent_state(question, forced_skill=None, execution_mode="auto"):
@@ -91,10 +106,13 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
     handler = GraphCallbackHandler()
     logger.info("Agent调用开始（thread_id={} trace_id={}）", thread_id, trace.trace_id)
     try:
-        final_state = graph.invoke(initial_agent_state(user_question, forced_skill, execution_mode),
-            config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64,
-                    "callbacks": [handler]},
-        )
+        from contextlib import nullcontext
+        with getattr(graph,"query_session",nullcontext)() as snapshot:
+            final_state = graph.invoke(initial_agent_state(user_question, forced_skill, execution_mode),
+                config={"configurable": {"thread_id": thread_id}, "recursion_limit": 64,
+                        "callbacks": [handler]},
+            )
+        snapshot_info = snapshot
     finally:
         if owned_trace:
             end_trace()
@@ -122,5 +140,6 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
         "task_plan": final_state.get("task_plan"),
         "task_results": final_state.get("task_results") or [],
         "trace_id": trace.trace_id,
+        "snapshot": snapshot_info,
     }
     return result

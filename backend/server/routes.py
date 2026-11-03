@@ -112,27 +112,30 @@ async def chat_stream(req:ChatRequest,request:Request):
         final_state = {}
         try:
             # updates模式：每完成一个节点，yield一次该节点的状态增量
-            async for update in graph.astream(initial_state,config=config,stream_mode="updates"):
-                for node_name,node_output in update.items():
-                    # updates模式下，返回空dict的节点会被LangGraph变成None，跳过即可
-                    if node_output is None:
-                        continue
-                    final_state.update(node_output)
-                    event = {"type":"node","node":node_name}
-                    # 只挑前端关心的字段
-                    for key in ("rewritten_question","sql","answer","success","route","active_skill",
-                                "collaboration_status", "task_plan", "task_results",
-                                "current_task_result", "task_index", "review_round"):
-                        if key in node_output:
-                            event[key] = node_output[key]
-                    if "field_docs" in node_output:
-                        event["retrieved_docs"] = [d.doc_id for d in node_output["field_docs"]]
-                    # 执行节点带查询结果：前端直接拿表格数据，无需再请求一次
-                    if node_output.get("query_result") is not None:
-                        event["query_result"] = node_output["query_result"].model_dump()
-                    if "attempts_log" in node_output:
-                        event["attempts_log"] = node_output["attempts_log"]
-                    yield f"data: {json.dumps(event,ensure_ascii=False)}\n\n"
+            from contextlib import nullcontext
+            with getattr(graph,"query_session",nullcontext)() as snapshot:
+                async for update in graph.astream(initial_state,config=config,stream_mode="updates"):
+                    for node_name,node_output in update.items():
+                        # updates模式下，返回空dict的节点会被LangGraph变成None，跳过即可
+                        if node_output is None:
+                            continue
+                        final_state.update(node_output)
+                        event = {"type":"node","node":node_name}
+                        # 只挑前端关心的字段
+                        for key in ("rewritten_question","sql","answer","success","route","active_skill",
+                                    "collaboration_status", "task_plan", "task_results",
+                                    "current_task_result", "task_index", "review_round"):
+                            if key in node_output:
+                                event[key] = node_output[key]
+                        if "field_docs" in node_output:
+                            event["retrieved_docs"] = [d.doc_id for d in node_output["field_docs"]]
+                        # 执行节点带查询结果：前端直接拿表格数据，无需再请求一次
+                        if node_output.get("query_result") is not None:
+                            event["query_result"] = node_output["query_result"].model_dump()
+                        if "attempts_log" in node_output:
+                            event["attempts_log"] = node_output["attempts_log"]
+                        yield f"data: {json.dumps(event,ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type':'snapshot','snapshot':snapshot},ensure_ascii=False)}\n\n"
             outcome = classify_outcome(final_state)
             ok = outcome == "success"
             record_chat_outcome(outcome)

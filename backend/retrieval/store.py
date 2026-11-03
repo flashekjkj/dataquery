@@ -25,7 +25,7 @@ class SchemaStore:
     """Schema存储器：读取表结构，批量生成字段文档列表"""
     def __init__(self, schema_tables: List[dict]):
         """
-        :param schema_tables: 从data.database导入的SCHEMA全局变量
+        :param schema_tables: 由QueryContext快照提供的表元数据
         """
         self.schema_tables = schema_tables
 

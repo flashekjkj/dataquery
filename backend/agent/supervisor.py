@@ -12,7 +12,7 @@ from app.clock import business_now
 from agent.contracts import TaskPlan, QueryTaskResult, parse_contract
 from agent.specialists.query_agent import build_query_agent
 from agent.specialists.review_agent import review_task
-from data.database import SCHEMA, RELATIONS
+from datasources.demo import demo_query_context
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,13 @@ def should_collaborate(question, mode):
     return bool(re.search(r"分析|归因|为什么|原因|贡献|分别|同时|并且|以及|并找|对比.*再", question))
 
 
-def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None):
+def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None,query_context=None,hybrid=None):
+    query_context = query_context or demo_query_context()
     query_agent = build_query_agent(nodes, max_attempts)
+    def metadata(question):
+        if hasattr(hybrid,'prompt_metadata'):
+            return hybrid.prompt_metadata(question)
+        return query_context.prompt_metadata({t.id for t in query_context.snapshot.tables[:3]})
 
     def skill_context(state):
         skill = skill_registry.get(state["active_skill"]) if skill_registry and state.get("active_skill") else None
@@ -43,7 +48,7 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
             response = client.llm_invoke(prompt=json.dumps({
                 "question": question, "user_profile": state.get("user_profile", ""),
                 "now": business_now(),
-                "schema": SCHEMA, "relations": RELATIONS,
+                **metadata(question),
                 "skill": skill_context(state),
             }, ensure_ascii=False), system_prompt=PLAN_PROMPT,
                 operation="supervisor_plan")
@@ -113,7 +118,7 @@ def build_collaboration_nodes(client, nodes, max_attempts=3, skill_registry=None
                 "task": state["task_plan"]["tasks"][state["task_index"]],
                 "assumptions": state["task_plan"]["assumptions"],
                 "user_profile": state.get("user_profile", ""),
-                "schema": SCHEMA, "relations": RELATIONS, "result": result,
+                **metadata(state.get('rewritten_question') or state['user_question']), "result": result,
                 "skill": skill_context(state),
             })
         except Exception:

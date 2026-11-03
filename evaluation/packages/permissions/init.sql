@@ -1,0 +1,2 @@
+CREATE TABLE staff(id INTEGER PRIMARY KEY,name VARCHAR,salary INTEGER);
+    CREATE TABLE secrets(token VARCHAR);INSERT INTO staff VALUES(1,'A',100),(2,'B',200);INSERT INTO secrets VALUES('hidden');

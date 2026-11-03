@@ -1,0 +1,27 @@
+{
+  "metrics": {
+    "sales": {
+      "tables": [
+        "\"main\".\"payments\""
+      ],
+      "expression": "SUM(net_receipt)",
+      "description": "实收金额"
+    }
+  },
+  "joins": {
+    "payment_order": {
+      "left": "\"main\".\"payments\"",
+      "right": "\"main\".\"orders\"",
+      "keys": [
+        [
+          "order_id",
+          "id"
+        ]
+      ],
+      "cardinality": "many_to_one"
+    }
+  },
+  "time_fields": {
+    "\"main\".\"orders\"": "created"
+  }
+}

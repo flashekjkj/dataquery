@@ -15,7 +15,7 @@ from agent.query_context import (
     format_query_result_for_llm, generate_natural_answer, _has_memory_trigger,
 )
 
-def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,skill_registry=None,mcp_manager=None):
+def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,skill_registry=None,mcp_manager=None,query_context=None):
     """
     构建所有的LangGraph节点，闭包捕获外部依赖
     model_client / hybrid / executor / conv_memory / long_term_memory
@@ -36,7 +36,10 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
         if skill_registry is None or not state.get("active_skill"):
             return ""
         skill = skill_registry.get(state["active_skill"])
-        return skill.system_instructions if skill else ""
+        if not skill:
+            return ""
+        definitions=(query_context.semantics if query_context else skill_registry.query_context.semantics).get('metrics',{})
+        return skill.system_instructions + '\n指标定义：' + json.dumps({m:definitions[m] for m in skill.metrics if m in definitions},ensure_ascii=False)
 
     def skill_node(state:AskDataState) -> dict:
         """
@@ -179,7 +182,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
             skill = skill_registry.get(state["active_skill"])
             table_scope = skill.table_scope if skill else None
         field_docs, relations, value_samples = retrieve_schema_context(
-            hybrid, executor, effective,table_scope=table_scope
+            hybrid, executor, effective,table_scope=table_scope, query_context=query_context
         )
         return {
             "field_docs": field_docs,
@@ -213,7 +216,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                     value_samples=state["value_samples"],
                     model_client=model_client,
                     user_profile=profile,
-                    skill_instructions=skill_instructions
+                    skill_instructions=skill_instructions, query_context=query_context
                 )
             else:
                 sql = generate_repair_sql(
@@ -225,7 +228,7 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                     error_msg=state["last_error"],
                     model_client=model_client,
                     user_profile=profile,
-                    skill_instructions=skill_instructions
+                    skill_instructions=skill_instructions, query_context=query_context
                 )
         except LLMCallError as e:
             msg = f"模型服务不可用（{e.kind}，已尝试{e.attempts}次）"

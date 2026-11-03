@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import List,Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PrivateAttr
 
 class Skill(BaseModel):
     """单个技能定义：对应 data/skills/{name}/skill.json"""
@@ -11,17 +11,28 @@ class Skill(BaseModel):
     display_name:str
     description:str
     trigger_keywords:List[str]
-    table_scope:List[str]
+    metrics:List[str] = Field(default_factory=list)
+    _tables:list[str] = PrivateAttr(default_factory=list)
     system_instructions:str = ""
     example_questions:List[str] = []
     mcp_tools:List[str] = []
+
+    @property
+    def table_scope(self):
+        return self._tables
 
 class SkillRegistry:
     """
     技能注册表：扫描data/skills目录加载全部skill.json
     提供关键词匹配与按名获取
     """
-    def __init__(self,skill_dir:Path):
+    def __init__(self,skill_dir:Path,query_context=None):
+        if query_context is None:
+            from datasources.demo import demo_query_context
+            from datasources.semantics import demo_semantics
+            query_context=demo_query_context()
+            query_context=query_context.model_copy(update={'semantics':demo_semantics(query_context.snapshot).model_dump()})
+        self.query_context=query_context
         self.skills_dir = skill_dir
         self.skills:List[Skill] = []
         self.load_all()
@@ -30,7 +41,18 @@ class SkillRegistry:
         self.skills = []
         for skill_file in sorted(self.skills_dir.glob("*/skill.json")):
             payload = json.loads(skill_file.read_text(encoding="utf-8"))
-            self.skills.append(Skill(**payload))
+            skill=Skill(**payload)
+            definitions=self.query_context.semantics.get('metrics',{})
+            if not set(skill.metrics)<=definitions.keys():
+                continue
+            skill._tables=sorted({t for m in skill.metrics for t in definitions[m]['tables']})
+            # 指标表的合法维度关联也参与召回；物理表由当前数据源配置解析。
+            tables=set(skill._tables)
+            for rule in self.query_context.semantics.get('joins',{}).values():
+                if rule['left'] in tables or rule['right'] in tables:
+                    tables.update((rule['left'],rule['right']))
+            skill._tables=sorted(tables)
+            self.skills.append(skill)
 
     def get(self,name:str) -> Optional[Skill]:
         for s in self.skills:

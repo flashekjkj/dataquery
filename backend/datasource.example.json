@@ -1,0 +1,18 @@
+{
+  "source_id": "warehouse",
+  "dialect": "postgres",
+  "url": "postgresql+psycopg://askdata_readonly:CHANGE_ME@127.0.0.1:5432/warehouse",
+  "schemas": [
+    "sales",
+    "crm"
+  ],
+  "max_rows": 100,
+  "timeout_seconds": 5,
+  "pool_size": 5,
+  "policy_file": "policy.example.json",
+  "semantic_files": [
+    "semantics.example.json"
+  ],
+  "query_mode": "independent",
+  "snapshot_seconds": 120
+}

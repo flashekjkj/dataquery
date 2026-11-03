@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "schema_drift",
+  "category": "schema_drift",
+  "fixture": "init.sql",
+  "policy": "policy.json",
+  "semantics": "semantics.json",
+  "cases": "cases.jsonl"
+}

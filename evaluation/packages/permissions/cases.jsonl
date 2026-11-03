@@ -1,0 +1,6 @@
+{"id": "allowed", "question": "可见员工", "reference_sql": "SELECT id,name FROM staff", "expected_tables": ["\"main\".\"staff\""]}
+{"id": "star", "question": "星号只展开可见列", "reference_sql": "SELECT id,name FROM staff", "replay_sql": "SELECT * FROM staff", "expected_tables": ["\"main\".\"staff\""]}
+{"id": "deny-column", "question": "隐藏薪酬", "reference_sql": "SELECT salary FROM staff", "expected_action": "deny"}
+{"id": "deny-table", "question": "禁止表", "reference_sql": "SELECT * FROM secrets", "expected_action": "deny"}
+{"id": "deny-cte", "question": "CTE不能绕过列权限", "reference_sql": "WITH x AS (SELECT salary FROM staff) SELECT * FROM x", "expected_action": "deny"}
+{"id": "deny-subquery", "question": "子查询不能绕过", "reference_sql": "SELECT id FROM staff WHERE EXISTS(SELECT 1 FROM secrets)", "expected_action": "deny"}

@@ -1,0 +1,8 @@
+{
+  "tables": {
+    "\"main\".\"staff\"": [
+      "id",
+      "name"
+    ]
+  }
+}

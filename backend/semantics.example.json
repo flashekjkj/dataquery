@@ -1,0 +1,46 @@
+{
+  "metrics": {
+    "sales": {
+      "tables": [
+        "\"sales\".\"orders\""
+      ],
+      "expression": "SUM(paid_amount)",
+      "description": "已支付订单实付金额",
+      "unit": "元",
+      "time_field": "order_date",
+      "filters": [
+        "status='已支付'"
+      ]
+    },
+    "order_count": {
+      "tables": [
+        "\"sales\".\"orders\""
+      ],
+      "expression": "COUNT(*)",
+      "description": "订单数"
+    },
+    "customer_count": {
+      "tables": [
+        "\"crm\".\"customers\""
+      ],
+      "expression": "COUNT(DISTINCT customer_id)",
+      "description": "去重客户数"
+    }
+  },
+  "joins": {
+    "orders_customer": {
+      "left": "\"sales\".\"orders\"",
+      "right": "\"crm\".\"customers\"",
+      "keys": [
+        [
+          "customer_id",
+          "customer_id"
+        ]
+      ],
+      "cardinality": "many_to_one"
+    }
+  },
+  "time_fields": {
+    "\"sales\".\"orders\"": "order_date"
+  }
+}

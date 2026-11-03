@@ -42,6 +42,10 @@ node_modules/
 dist/
 .pytest_cache/
 .ruff_cache/
+/backend/data/sources/
+/backend/data/cache/
+datasource.local.json
+*.local.json
 /evaluation/single-multi/progress.md
 /evaluation/single-multi/runs/paired-main/
 /evaluation/single-multi/runs/paired-v1/

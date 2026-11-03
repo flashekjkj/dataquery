@@ -1,0 +1,667 @@
+[
+  {
+    "fingerprints": {
+      "fixture": "683b14892a962541ba7d1d1d22d307636c86d364b5933d189bb1dfc41eda9bde",
+      "policy": "016b1a64f4853aeae390156a9dd213465216e1ba164cff3030b86686b66463bc",
+      "semantics": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "cases": "ec8c6a2e279e9323984551a4397b0e5701f3d5e0dfc3ac5e823cf764556725aa"
+    },
+    "scorer_sha256": "40b6d43454fd689d99e4babee51ede777b28ab9320db8d98b58198707338002d",
+    "package": "ecommerce",
+    "category": "ecommerce",
+    "reference_replay": true,
+    "note": "参考重放仅验证夹具与执行框架，不是模型成绩；SQL正确率采用独立参考结果等价。",
+    "query_count": 42,
+    "sql_accuracy": 1.0,
+    "execution_success_rate": 1.0,
+    "table_path_coverage": 1.0,
+    "denial_count": 0,
+    "denial_accuracy": null,
+    "cases": [
+      {
+        "id": "dev-001-0",
+        "sql": "SELECT COUNT(*) FROM customers",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-002-0",
+        "sql": "SELECT COUNT(*) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-003-0",
+        "sql": "SELECT COUNT(*) FROM products",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-004-0",
+        "sql": "SELECT COUNT(*) FROM customers WHERE region='华东'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-005-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE status='已支付'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-006-0",
+        "sql": "SELECT SUM(order_amount) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-007-0",
+        "sql": "SELECT SUM(paid_amount) FROM orders WHERE status='已支付'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-008-0",
+        "sql": "SELECT AVG(paid_amount) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-009-0",
+        "sql": "SELECT customer_level,COUNT(*) FROM customers GROUP BY customer_level",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-010-0",
+        "sql": "SELECT region,COUNT(*) FROM orders GROUP BY region",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-011-0",
+        "sql": "SELECT category,SUM(paid_amount) FROM orders WHERE status='已支付' GROUP BY category",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-012-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE order_date>='2026-09-01' AND order_date<'2026-10-01'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-013-0",
+        "sql": "SELECT SUM(paid_amount) FROM orders WHERE status='已支付' AND order_date>='2026-08-01' AND order_date<'2026-09-01'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-014-0",
+        "sql": "SELECT COUNT(DISTINCT customer_id) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-015-0",
+        "sql": "SELECT c.customer_level,SUM(o.paid_amount) FROM orders o JOIN customers c ON o.customer_id=c.customer_id WHERE o.status='已支付' GROUP BY c.customer_level",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-016-0",
+        "sql": "SELECT p.product_name,COUNT(*) FROM orders o JOIN products p ON o.product_id=p.product_id GROUP BY p.product_name",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-017-0",
+        "sql": "SELECT customer_id,customer_name FROM customers WHERE region='华中'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-018-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE order_date>='2027-01-01' AND order_date<'2027-02-01'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-019-0",
+        "sql": "SELECT order_id,paid_amount FROM orders ORDER BY paid_amount DESC,order_id LIMIT 3",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-020-0",
+        "sql": "SELECT COUNT(*) FILTER(WHERE status='已退款')*1.0/COUNT(*) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-021-0",
+        "sql": "SELECT customer_id,COUNT(*) FROM orders GROUP BY customer_id HAVING COUNT(*)>10",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-022-0",
+        "sql": "SELECT MIN(order_date),MAX(order_date) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-023-0",
+        "sql": "SELECT MAX(order_amount),MIN(order_amount) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-024-0",
+        "sql": "SELECT SUM(paid_amount) FROM orders WHERE region='华东' AND status='已支付'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-025-0",
+        "sql": "SELECT COUNT(*) FROM customers WHERE region='华东'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-025-1",
+        "sql": "SELECT SUM(paid_amount) FROM orders WHERE region='华东' AND status='已支付'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "dev-026-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE region='华东' AND status='已退款'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-001-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE order_amount>=500 AND order_amount<1000",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-002-0",
+        "sql": "SELECT status,COUNT(*),SUM(order_amount) FROM orders GROUP BY status",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-003-0",
+        "sql": "SELECT c.customer_level,COUNT(DISTINCT o.customer_id) FROM orders o JOIN customers c ON c.customer_id=o.customer_id WHERE o.status='已支付' GROUP BY c.customer_level",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-004-0",
+        "sql": "SELECT SUM(paid_amount)/COUNT(DISTINCT customer_id) FROM orders WHERE status='已支付'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-005-0",
+        "sql": "SELECT MONTH(order_date),SUM(paid_amount) FROM orders WHERE YEAR(order_date)=2026 AND status='已支付' GROUP BY MONTH(order_date)",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-006-0",
+        "sql": "SELECT SUM(o.paid_amount) FROM orders o JOIN customers c ON o.customer_id=c.customer_id WHERE c.customer_level='战略客户' AND o.order_date>='2026-10-01' AND o.order_date<'2026-11-01'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-007-0",
+        "sql": "SELECT SUM(order_amount-paid_amount) FROM orders WHERE order_date>='2026-09-01' AND order_date<'2026-10-01'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-008-0",
+        "sql": "SELECT category,SUM(paid_amount) AS total FROM orders WHERE status='已支付' GROUP BY category ORDER BY total DESC,category LIMIT 2",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-009-0",
+        "sql": "SELECT p.product_id,p.product_name FROM products p WHERE NOT EXISTS(SELECT 1 FROM orders o WHERE o.product_id=p.product_id AND o.status='已支付')",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-010-0",
+        "sql": "SELECT COUNT(*) FROM (SELECT DISTINCT region,category FROM orders)",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-011-0",
+        "sql": "SELECT SUM(CASE WHEN status='已支付' THEN paid_amount ELSE 0 END),SUM(CASE WHEN status='已退款' THEN paid_amount ELSE 0 END) FROM orders",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-012-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE order_date BETWEEN '2026-09-01' AND '2026-09-15'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-013-0",
+        "sql": "SELECT COUNT(*) FROM customers WHERE region='华南'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-013-1",
+        "sql": "SELECT SUM(paid_amount) FROM orders WHERE region='华南' AND status='已支付'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "holdout-014-0",
+        "sql": "SELECT COUNT(*) FROM orders WHERE region='华南' AND status='已退款'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "fingerprints": {
+      "fixture": "1311a57613ea1ab2847b4992441ca5206fa424cef73f5db1c9c1a07c37263be9",
+      "policy": "2d942e9cb3b90a1dd80657f62099d1aa6f38af72709003ae502e035a29da8f32",
+      "semantics": "12f313398b6177d8d496da6a38cb225f8ff3b4cf6c38cdd59f3ae961d03772dd",
+      "cases": "d9f7951b7a2715080abbbef6dfd8625b5b2949d5757bce40aefe0f7242e8e9b5"
+    },
+    "scorer_sha256": "40b6d43454fd689d99e4babee51ede777b28ab9320db8d98b58198707338002d",
+    "package": "new_domain",
+    "category": "new_domain",
+    "reference_replay": true,
+    "note": "参考重放仅验证夹具与执行框架，不是模型成绩；SQL正确率采用独立参考结果等价。",
+    "query_count": 2,
+    "sql_accuracy": 1.0,
+    "execution_success_rate": 1.0,
+    "table_path_coverage": 1.0,
+    "denial_count": 0,
+    "denial_accuracy": null,
+    "cases": [
+      {
+        "id": "offers",
+        "sql": "SELECT COUNT(*) FROM applications WHERE stage='offer'",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "job-path",
+        "sql": "SELECT j.title,COUNT(*) FROM applications a JOIN jobs j ON a.job_id=j.id GROUP BY j.title",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "fingerprints": {
+      "fixture": "df983f0aafe45c921a6c418947a50e51e0f381cebdf50fdd71f95d6502f9f048",
+      "policy": "3bd4efe73b2eed5b95f0f3ad7f23175643b9169dfb15bc08b5bff8383f9c0d75",
+      "semantics": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "cases": "c0555cf1631e4853fc595540e141bb031f928f6ebdf2be48a8d66b24bd86453c"
+    },
+    "scorer_sha256": "40b6d43454fd689d99e4babee51ede777b28ab9320db8d98b58198707338002d",
+    "package": "permissions",
+    "category": "permissions",
+    "reference_replay": true,
+    "note": "参考重放仅验证夹具与执行框架，不是模型成绩；SQL正确率采用独立参考结果等价。",
+    "query_count": 2,
+    "sql_accuracy": 1.0,
+    "execution_success_rate": 1.0,
+    "table_path_coverage": 1.0,
+    "denial_count": 4,
+    "denial_accuracy": 1.0,
+    "cases": [
+      {
+        "id": "allowed",
+        "sql": "SELECT id,name FROM staff",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "star",
+        "sql": "SELECT * FROM staff",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "deny-column",
+        "sql": "SELECT salary FROM staff",
+        "expected_action": "deny",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "SQL执行失败：安全拦截：SQL超出授权范围、合法JOIN范围或不受支持"
+      },
+      {
+        "id": "deny-table",
+        "sql": "SELECT * FROM secrets",
+        "expected_action": "deny",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "SQL执行失败：安全拦截：SQL超出授权范围、合法JOIN范围或不受支持"
+      },
+      {
+        "id": "deny-cte",
+        "sql": "WITH x AS (SELECT salary FROM staff) SELECT * FROM x",
+        "expected_action": "deny",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "SQL执行失败：安全拦截：SQL超出授权范围、合法JOIN范围或不受支持"
+      },
+      {
+        "id": "deny-subquery",
+        "sql": "SELECT id FROM staff WHERE EXISTS(SELECT 1 FROM secrets)",
+        "expected_action": "deny",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "SQL执行失败：安全拦截：SQL超出授权范围、合法JOIN范围或不受支持"
+      }
+    ]
+  },
+  {
+    "fingerprints": {
+      "fixture": "a1232dfb0f8f2b1fd609eaca019891ee8043ae99f6a8211c7d091ee4f95b4da3",
+      "policy": "ed59cb9406d12a214f508cf8e542c2d00ff821658d27d16fc06354d5fa490be0",
+      "semantics": "f700f5eb6d0af639f4eb84176d59a4218896e049d410c6c2c16e1f4ea481b01d",
+      "cases": "179466b80b65083e7853a88e9f723efb74ee2afd80b1d92fb855fe32eb57f1f9"
+    },
+    "scorer_sha256": "40b6d43454fd689d99e4babee51ede777b28ab9320db8d98b58198707338002d",
+    "package": "renamed_split",
+    "category": "renamed_split",
+    "reference_replay": true,
+    "note": "参考重放仅验证夹具与执行框架，不是模型成绩；SQL正确率采用独立参考结果等价。",
+    "query_count": 2,
+    "sql_accuracy": 1.0,
+    "execution_success_rate": 1.0,
+    "table_path_coverage": 1.0,
+    "denial_count": 2,
+    "denial_accuracy": 1.0,
+    "cases": [
+      {
+        "id": "split-total",
+        "sql": "SELECT SUM(net_receipt) FROM payments",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "split-join",
+        "sql": "SELECT o.created,SUM(p.net_receipt) FROM payments p JOIN orders o ON p.order_id=o.id GROUP BY o.created",
+        "expected_action": "query",
+        "execution_success": true,
+        "sql_correct": true,
+        "action_correct": true,
+        "path_coverage": 1.0,
+        "error": null
+      },
+      {
+        "id": "old-column",
+        "sql": "SELECT paid_amount FROM payments",
+        "expected_action": "deny",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "SQL执行失败：安全拦截：SQL超出授权范围、合法JOIN范围或不受支持"
+      },
+      {
+        "id": "wrong-join",
+        "sql": "SELECT * FROM payments p JOIN orders o ON p.id=o.id",
+        "expected_action": "deny",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "SQL执行失败：安全拦截：SQL超出授权范围、合法JOIN范围或不受支持"
+      }
+    ]
+  },
+  {
+    "fingerprints": {
+      "fixture": "a1232dfb0f8f2b1fd609eaca019891ee8043ae99f6a8211c7d091ee4f95b4da3",
+      "policy": "ed59cb9406d12a214f508cf8e542c2d00ff821658d27d16fc06354d5fa490be0",
+      "semantics": "f700f5eb6d0af639f4eb84176d59a4218896e049d410c6c2c16e1f4ea481b01d",
+      "cases": "5237a57b5244de9ae8ee8c4afb563ec8edc4c6f7a2d10eaae99664d0f66ea375"
+    },
+    "scorer_sha256": "40b6d43454fd689d99e4babee51ede777b28ab9320db8d98b58198707338002d",
+    "package": "schema_drift",
+    "category": "schema_drift",
+    "reference_replay": true,
+    "note": "参考重放仅验证夹具与执行框架，不是模型成绩；SQL正确率采用独立参考结果等价。",
+    "query_count": 0,
+    "sql_accuracy": null,
+    "execution_success_rate": null,
+    "table_path_coverage": null,
+    "denial_count": 2,
+    "denial_accuracy": 1.0,
+    "cases": [
+      {
+        "id": "stale-added",
+        "sql": "SELECT COUNT(*) FROM orders",
+        "expected_action": "stale",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "Schema已变化，请刷新元数据并重建Agent"
+      },
+      {
+        "id": "stale-renamed",
+        "sql": "SELECT SUM(net_receipt) FROM payments",
+        "expected_action": "stale",
+        "execution_success": false,
+        "sql_correct": false,
+        "action_correct": true,
+        "path_coverage": 0.0,
+        "error": "Schema已变化，请刷新元数据并重建Agent"
+      }
+    ]
+  }
+]

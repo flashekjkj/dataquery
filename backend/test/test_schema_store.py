@@ -6,10 +6,10 @@ BASE_BACKEND = Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(BASE_BACKEND))
 
 from retrieval.store import SchemaStore
-from data.database import SCHEMA
+from datasources.demo import load_demo_catalog
 
 def test_schema_store_build_docs():
-    tables = SCHEMA
+    tables = load_demo_catalog()[0]
     store = SchemaStore(tables)
     docs = store.build_field_documents()
 

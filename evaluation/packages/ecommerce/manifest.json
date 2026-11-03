@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "ecommerce",
+  "category": "ecommerce",
+  "fixture": "fixture.duckdb",
+  "policy": "policy.json",
+  "semantics": "semantics.json",
+  "cases": "cases.jsonl"
+}

@@ -339,3 +339,7 @@ yarl==1.25.1
 tenacity==9.2.1
 loguru==0.7.3
 prometheus-client==0.26.0
+SQLAlchemy==2.0.55
+greenlet==3.5.6
+psycopg[binary]==3.3.7
+sqlglot==30.27.0

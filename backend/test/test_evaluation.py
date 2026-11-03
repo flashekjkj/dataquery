@@ -118,8 +118,8 @@ class ScorerTests(unittest.TestCase):
     def test_temporal_role_is_retained_if_initial_retrieval_misses_it(self):
         from agent.query_context import retrieve_schema_context
         from retrieval.store import SchemaStore
-        from data.database import SCHEMA
-        docs=SchemaStore(SCHEMA).build_field_documents()
+        from datasources.demo import load_demo_catalog
+        docs=SchemaStore(load_demo_catalog()[0]).build_field_documents()
         class Retriever:
             def retrieve(self,*args,**kwargs):
                 return [(d,1) for d in docs if d.table_name=='orders' and d.role!='time'][:8]

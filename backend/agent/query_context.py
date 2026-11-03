@@ -3,7 +3,7 @@ import json
 import re
 from typing import Any, Dict,List,Optional
 
-from data.database import RELATIONS
+from datasources.demo import demo_query_context
 from sql.executor import SqlExecuteError
 from sql.sql_prompts import ANSWER_FROM_RESULT_SYSTEM_PROMPT, ANSWER_FROM_RESULT_USER_TPL, CHAT_SYSTEM_PROMPT, ROUTE_SYSTEM_PROMPT, ROUTE_USER_TPL
 from observability import logger
@@ -63,7 +63,7 @@ def answer_directly(model_client, question: str, extra_instructions:str = "") ->
     return (resp.content or "").strip()
 
 
-def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional[List[str]] = None):
+def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional[List[str]] = None, query_context=None):
     """
     为SQL生成准备上下文：
     1. 混合检索召回top_k个字段文档
@@ -71,6 +71,7 @@ def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional
     3. 对维度/过滤/时间字段采样实际取值（value retrieval）
     返回 (field_docs, relations, value_samples)
     """
+    query_context = query_context or getattr(hybrid, "query_context", None) or demo_query_context()
     recall_k = TOP_K_SCHEMA * 2 if table_scope else TOP_K_SCHEMA
     # use_rerank=True：RRF融合后交给本地CrossEncoder精排，提高schema命中精度
     ranked = hybrid.retrieve(question,top_k=recall_k,use_rerank=True)
@@ -81,9 +82,8 @@ def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional
     # 日期约束不能因召回缺失时间字段而无声丢弃，只从命中表元数据补足时间角色。
     if re.search(r"\d{4}[-年]|\d{1,2}月|上月|本月|去年|今年|日期|时间", question):
         from retrieval.store import SchemaStore
-        from data.database import SCHEMA
         hit_tables = {doc.table_name for doc in field_docs}
-        time_docs = [doc for doc in SchemaStore(SCHEMA).build_field_documents()
+        time_docs = [doc for doc in SchemaStore(query_context.snapshot.schema_tables).build_field_documents()
                      if doc.table_name in hit_tables and doc.role == "time"
                      and (not table_scope or doc.table_name in table_scope)]
         for doc in time_docs:
@@ -95,7 +95,7 @@ def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional
     relations = [
         f"{r['left_table']}.{r['left_field']} = {r['right_table']}.{r['right_field']}"
         f"（{r['description']}）"
-        for r in RELATIONS
+        for r in [r.model_dump() for r in query_context.snapshot.relations]
         if r["left_table"] in hit_tables or r["right_table"] in hit_tables
     ]
 

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     OBS_TRACE_DIR:str = "data/traces"
     # /metrics 端点开关
     METRICS_ENABLED:bool = True
+    DATA_SOURCE_FILE:str = ""
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,

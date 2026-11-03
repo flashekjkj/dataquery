@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "new_domain",
+  "category": "new_domain",
+  "fixture": "init.sql",
+  "policy": "policy.json",
+  "semantics": "semantics.json",
+  "cases": "cases.jsonl"
+}

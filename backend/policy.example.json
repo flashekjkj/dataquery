@@ -1,0 +1,16 @@
+{
+  "principal": "analytics_service",
+  "tables": {
+    "\"sales\".\"orders\"": [
+      "order_id",
+      "order_date",
+      "paid_amount",
+      "status",
+      "customer_id"
+    ],
+    "\"crm\".\"customers\"": [
+      "customer_id",
+      "customer_name"
+    ]
+  }
+}

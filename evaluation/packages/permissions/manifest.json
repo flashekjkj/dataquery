@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "permissions",
+  "category": "permissions",
+  "fixture": "init.sql",
+  "policy": "policy.json",
+  "semantics": "semantics.json",
+  "cases": "cases.jsonl"
+}

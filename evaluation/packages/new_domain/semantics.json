@@ -1,0 +1,25 @@
+{
+  "metrics": {
+    "offer_count": {
+      "tables": [
+        "\"main\".\"applications\""
+      ],
+      "expression": "COUNT(*)",
+      "filters": [
+        "stage='offer'"
+      ]
+    }
+  },
+  "joins": {
+    "application_job": {
+      "left": "\"main\".\"applications\"",
+      "right": "\"main\".\"jobs\"",
+      "keys": [
+        [
+          "job_id",
+          "id"
+        ]
+      ]
+    }
+  }
+}
