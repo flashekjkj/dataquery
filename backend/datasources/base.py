@@ -58,4 +58,4 @@ class BaseConnector(ABC):
         if entry is None or column not in {f.name for f in entry.fields}:
             raise ValueError("未知表或字段")
         qualified = table_id(entry.schema_name, entry.name)
-        return f"SELECT DISTINCT {quote_identifier(column)} FROM {qualified} LIMIT {n}"
+        return f"SELECT DISTINCT {quote_identifier(column)} FROM {qualified} ORDER BY {quote_identifier(column)} NULLS LAST LIMIT {n}"

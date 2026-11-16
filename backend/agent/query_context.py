@@ -72,32 +72,15 @@ def retrieve_schema_context(hybrid, executor, question: str,table_scope:Optional
     返回 (field_docs, relations, value_samples)
     """
     query_context = query_context or getattr(hybrid, "query_context", None) or demo_query_context()
-    recall_k = TOP_K_SCHEMA * 2 if table_scope else TOP_K_SCHEMA
-    # use_rerank=True：RRF融合后交给本地CrossEncoder精排，提高schema命中精度
-    ranked = hybrid.retrieve(question,top_k=recall_k,use_rerank=True)
-    if table_scope:
-        ranked = [item for item in ranked if item[0].table_name in table_scope]
-    field_docs = [doc for doc,_score in ranked[:TOP_K_SCHEMA]]
-
-    # 日期约束不能因召回缺失时间字段而无声丢弃，只从命中表元数据补足时间角色。
-    if re.search(r"\d{4}[-年]|\d{1,2}月|上月|本月|去年|今年|日期|时间", question):
-        from retrieval.store import SchemaStore
-        hit_tables = {doc.table_name for doc in field_docs}
-        time_docs = [doc for doc in SchemaStore(query_context.snapshot.schema_tables).build_field_documents()
-                     if doc.table_name in hit_tables and doc.role == "time"
-                     and (not table_scope or doc.table_name in table_scope)]
-        for doc in time_docs:
-            if not any(d.doc_id == doc.doc_id for d in field_docs):
-                field_docs = field_docs[:TOP_K_SCHEMA - 1] + [doc]
-
-    # 表关联：只保留与命中的表相关的条目，避免无关关系干扰LLM
-    hit_tables = {doc.table_name for doc in field_docs}
-    relations = [
-        f"{r['left_table']}.{r['left_field']} = {r['right_table']}.{r['right_field']}"
-        f"（{r['description']}）"
-        for r in [r.model_dump() for r in query_context.snapshot.relations]
-        if r["left_table"] in hit_tables or r["right_table"] in hit_tables
-    ]
+    from retrieval.context import assemble_context
+    from observability.tracer import record_span
+    config = getattr(hybrid, 'config', None)
+    field_budget = config.field_budget if config else 12
+    options = {'table_scope':table_scope} if table_scope is not None else {}
+    ranked = hybrid.retrieve(question,top_k=TOP_K_SCHEMA,**options)
+    field_docs, relations, diagnostics = assemble_context(
+        ranked,query_context,question,field_budget,TOP_K_SCHEMA,table_scope)
+    record_span('schema_context', 'tool', 0, diagnostics)
 
     # 字段样例值：采样失败（如字段类型不支持）就跳过，不阻塞主流程
     value_samples: Dict[str, Any] = {}

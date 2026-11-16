@@ -1,0 +1,8 @@
+{
+  "original_freeze_sha256": "8a781522e87e5609f5435fd14d4207d5ccb5e4da4d20b9e19f674062973cc341",
+  "sources": {
+    "backend/evaluation/retrieval_benchmark.py": "f1cbc500d5c95482e6fd6bc73ef693136c0ed67ca11dfb534c5b34fb5da3d58a"
+  },
+  "reason": "Correct demo_catalog in the Agent fixture adapter so short demo table IDs can be sampled. Handle partially completed reports and disclose this amendment. No retrieval logic, labels, selection or hyperparameters changed.",
+  "archived_records": 9
+}

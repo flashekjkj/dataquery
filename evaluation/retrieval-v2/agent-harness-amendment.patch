@@ -1,0 +1,49 @@
+--- frozen/backend/evaluation/retrieval_benchmark.py
++++ agent/backend/evaluation/retrieval_benchmark.py
+@@ -85,7 +85,8 @@
+ 
+ def connector(context):
+     database = ROOT.parent/'fixture.duckdb' if context.source_id=='demo' else ROOT/'company.duckdb'
+-    return DuckDBConnector(DataSourceConfig(source_id=context.source_id,dialect='duckdb',path=str(database)))
++    return DuckDBConnector(DataSourceConfig(source_id=context.source_id,dialect='duckdb',path=str(database),
++                                            demo_catalog=context.source_id=='demo'))
+ 
+ 
+ def validate_labels():
+@@ -251,6 +252,14 @@
+ 
+ def verify_freeze():
+     frozen = json.loads((ROOT/'freeze.json').read_text(encoding='utf-8'))
++    amendment_file = ROOT/'agent-amendment.json'
++    if amendment_file.exists():
++        amendment = json.loads(amendment_file.read_text(encoding='utf-8'))
++        if amendment['original_freeze_sha256'] != digest(ROOT/'freeze.json'):
++            raise ValueError('Agent夹具修订与原冻结清单不同')
++        if set(amendment['sources']) != {'backend/evaluation/retrieval_benchmark.py'}:
++            raise ValueError('修订只允许修改Agent评测适配文件')
++        frozen['sources'].update(amendment['sources'])
+     current = fingerprint()
+     current['selection_sha256'] = digest(ROOT/'selection.json')
+     if frozen != current:
+@@ -354,6 +363,9 @@
+         lines.extend(['','|真实Agent方案|完成/预期|SQL结果正确|执行成功|耗时P50秒|耗时P95秒|','|---|---:|---:|---:|---:|---:|'])
+         for name in ('vector','selected'):
+             values = [row for row in agent_rows if row['profile']==name]
++            if not values:
++                lines.append(f'|{name}|0/8|—|—|—|—|')
++                continue
+             durations = sorted(row['seconds'] for row in values)
+             lines.append(f'|{name}|{len(values)}/8|{sum(row["correct"] for row in values)}/{len(values)}|{sum(bool(row["result"].get("success")) for row in values)}/{len(values)}|{statistics.median(durations):.1f}|{durations[math.ceil(.95*len(durations))-1]:.1f}|')
+         lines.extend(['','真实Agent使用同一模型、独立会话、固定single模式、最多2次SQL尝试，交替执行方案顺序。',
+@@ -363,6 +375,11 @@
+         lines.extend(['','真实Agent评测尚未运行。'])
+     lines.extend(['','详细阶段排名见 `dev.jsonl` / `holdout.jsonl`，真实Agent结果见 `agent.jsonl`。',
+                   '冻结清单见 `freeze.json`，配置、源码和夹具在留出评测前后均校验哈希。'])
++    if (ROOT/'agent-amendment.json').exists():
++        lines.extend(['','Agent验收初次执行发现电商夹具短表名与限定表名不一致，采样阶段失败。',
++                      '仅修复评测适配器的 demo_catalog 参数及部分完成报告处理，原检索、标注、参数保持原冻结哈希。',
++                      '初次记录保存在 failed-agent-fixture-run，修订差异、哈希及原因见 agent-amendment.json 和 agent-harness-amendment.patch。',
++                      'Agent验收采用修订后的同一适配器重新执行全部预选配对题。'])
+     (ROOT/'report.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+     print(ROOT/'report.md',flush=True)
+ 

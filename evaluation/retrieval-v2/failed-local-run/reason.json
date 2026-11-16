@@ -1,0 +1,5 @@
+{
+  "reason": "All 40 local rerank calls degraded because model weights were missing. Superseded before freeze, no holdout was run.",
+  "rerank_backend": "local",
+  "rerank_model": "BAAI/bge-reranker-base"
+}

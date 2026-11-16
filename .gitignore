@@ -53,3 +53,4 @@ datasource.local.json
 
 /backend/data/logs/
 /backend/data/traces/
+/evaluation/retrieval-v2/traces/

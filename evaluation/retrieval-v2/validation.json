@@ -1,0 +1,16 @@
+{
+  "command": "python -X utf8 -m unittest test.test_retrieval_regressions test.test_source_governance test.test_datasources test.test_collaboration test.test_evaluation test.test_comparison test.test_runtime_lifecycle test.test_observability test.test_sql_json -q",
+  "tests_run": 88,
+  "passed": 82,
+  "failed": 0,
+  "skipped": 6,
+  "skip_reason": "Optional PostgreSQL integration tests require ASKDATA_TEST_PG_URL, which was not configured for this run.",
+  "rerank_regressions": "Includes real HTTP response mapping and invalid-index fallback tests with mocked transport.",
+  "agent_fixture_validation": {
+    "sources": 2,
+    "fields_sampled": 109,
+    "failures": 0
+  },
+  "environment_note": "Windows asyncio socketpair blocks in the sandbox, so full offline tests were run outside the sandbox.",
+  "sampling_fix": "SELECT DISTINCT sampling now uses ORDER BY with NULLS LAST for deterministic results."
+}

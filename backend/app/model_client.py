@@ -18,8 +18,10 @@ operation 标签区分调用用途（route/generate_sql/answer/...），
 from __future__ import annotations
 
 import json
+import math
 import random
 import time
+import httpx
 from typing import Any, Dict, Iterator, List, Optional
 
 import openai
@@ -168,6 +170,8 @@ class ModelClient:
         input_tokens = int(usage.get("input_tokens") or 0)
         output_tokens = int(usage.get("output_tokens") or 0)
         model = self.model_id if not self.mock else "mock"
+        if operation == 'rerank' and not self.mock:
+            model = settings.RERANK_API_MODEL
         record_llm_call(
             operation=operation, model=model, ok=ok, duration_ms=duration_ms,
             input_tokens=input_tokens, output_tokens=output_tokens,
@@ -351,7 +355,40 @@ class ModelClient:
                               retries=e.attempts - 1, error=e)
             raise
 
-    # ---------- 本地精排（非 LLM，降级路径 + 可观测性） ----------
+    # ---------- 精排（本地 / DashScope API，共用降级路径） ----------
+
+    def _rerank_api_once(self, query, documents):
+        try:
+            response = httpx.post(
+                settings.RERANK_API_URL,
+                headers={'Authorization':'Bearer '+(settings.RERANK_API_KEY or settings.LLM_API_KEY)},
+                json={'model':settings.RERANK_API_MODEL,
+                      'input':{'query':query,'documents':documents},
+                      'parameters':{'top_n':len(documents),'return_documents':False}},
+                timeout=settings.RERANK_TIMEOUT,
+            )
+            if response.status_code >= 400:
+                code = response.status_code
+                raise LLMCallError(f'重排API返回HTTP {code}',kind=f'http_{code}',
+                                   retriable=code in (408,429) or code>=500)
+            payload = response.json()
+            rows = payload['output']['results']
+            indices = [row['index'] for row in rows]
+            if any(type(index) is not int for index in indices) or sorted(indices)!=list(range(len(documents))):
+                raise ValueError('重排API必须返回每个候选的唯一合法索引')
+            results = [RerankItem(index=row['index'],text=documents[row['index']],
+                                  score=float(row['relevance_score'])) for row in rows]
+            if not all(math.isfinite(item.score) for item in results):
+                raise ValueError('重排API返回非有限分数')
+            results.sort(key=lambda item:item.score,reverse=True)
+            total = int(payload.get('usage',{}).get('total_tokens',0))
+            return RerankResponse(results=results), {'input_tokens':total,'output_tokens':0,'total_tokens':total}
+        except LLMCallError:
+            raise
+        except (httpx.TimeoutException,httpx.NetworkError) as exc:
+            raise LLMCallError('重排API连接失败',kind='connection',retriable=True) from exc
+        except (ValueError,KeyError,TypeError) as exc:
+            raise LLMCallError('重排API响应格式无效',kind='bad_response') from exc
 
     def _get_reranker(self):
         """
@@ -371,7 +408,7 @@ class ModelClient:
     def rerank(self, query: str, documents: List[str]) -> RerankResponse:
         """
         搜索结果重排
-        真实模式：本地CrossEncoder（bge-reranker）对(query, doc)对做相关性打分，
+        真实模式：按配置调用API或本地CrossEncoder对(query, doc)打分，
         index保持原输入列表位置（调用方靠index回映射原始文档）
         加载/推理失败时降级为按原顺序返回，不阻塞检索主链路（降级计入指标）
         """
@@ -387,6 +424,11 @@ class ModelClient:
 
         start = time.perf_counter()
         try:
+            if settings.RERANK_BACKEND == 'dashscope':
+                (response,usage),retries = self._run_with_retry(
+                    lambda:self._rerank_api_once(query,documents),operation='rerank')
+                self._record_call('rerank',True,(time.perf_counter()-start)*1000,usage,retries)
+                return response
             model = self._get_reranker()
             pairs = [[query, doc] for doc in documents]
             scores = model.predict(pairs)
@@ -397,12 +439,16 @@ class ModelClient:
             # 按分数降序；index仍是原位置，排序只影响返回顺序
             rerank_items.sort(key=lambda x: x.score, reverse=True)
             record_span("rerank", "tool", (time.perf_counter() - start) * 1000,
-                        metadata={"docs": len(documents)})
+                        metadata={"docs": len(documents),'backend':'local','model':settings.RERANK_MODEL_ID})
             return RerankResponse(results=rerank_items)
         except Exception as e:
             rerank_degraded_total.inc()
-            logger.warning("本地rerank失败，降级为按原顺序返回：{}", e)
-            return RerankResponse(results=[
+            error = e if isinstance(e,LLMCallError) else classify_llm_error(e)
+            if settings.RERANK_BACKEND == 'dashscope':
+                self._record_call('rerank',False,(time.perf_counter()-start)*1000,
+                                  retries=error.attempts-1,error=error)
+            logger.warning("rerank失败，降级为按原顺序返回（backend={} kind={}）",settings.RERANK_BACKEND,error.kind)
+            return RerankResponse(degraded=True, results=[
                 RerankItem(index=i, text=doc, score=0.0)
                 for i, doc in enumerate(documents)
             ])

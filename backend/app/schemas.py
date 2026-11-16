@@ -20,3 +20,4 @@ class RerankItem(BaseModel):
 class RerankResponse(BaseModel):
     """重排整体返回"""
     results:List[RerankItem]
+    degraded: bool = False

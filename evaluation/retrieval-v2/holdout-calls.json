@@ -1,0 +1,386 @@
+[
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 2042.1166999985871,
+    "usage": {
+      "input_tokens": 22,
+      "output_tokens": 0,
+      "total_tokens": 22
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 2165.433899997879,
+    "usage": {
+      "input_tokens": 12,
+      "output_tokens": 0,
+      "total_tokens": 12
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 2460.374199999933,
+    "usage": {
+      "input_tokens": 8,
+      "output_tokens": 0,
+      "total_tokens": 8
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 2702.5605000017094,
+    "usage": {
+      "input_tokens": 13,
+      "output_tokens": 0,
+      "total_tokens": 13
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 511.0653000010643,
+    "usage": {
+      "input_tokens": 15,
+      "output_tokens": 0,
+      "total_tokens": 15
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 467.38399999958347,
+    "usage": {
+      "input_tokens": 9,
+      "output_tokens": 0,
+      "total_tokens": 9
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 471.19759999986854,
+    "usage": {
+      "input_tokens": 23,
+      "output_tokens": 0,
+      "total_tokens": 23
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 1376.96440000218,
+    "usage": {
+      "input_tokens": 18,
+      "output_tokens": 0,
+      "total_tokens": 18
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 518.5153999991599,
+    "usage": {
+      "input_tokens": 11,
+      "output_tokens": 0,
+      "total_tokens": 11
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 547.0003000009456,
+    "usage": {
+      "input_tokens": 16,
+      "output_tokens": 0,
+      "total_tokens": 16
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 1402.1315999998478,
+    "usage": {
+      "input_tokens": 11,
+      "output_tokens": 0,
+      "total_tokens": 11
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 546.0749999983818,
+    "usage": {
+      "input_tokens": 20,
+      "output_tokens": 0,
+      "total_tokens": 20
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 527.0841000019573,
+    "usage": {
+      "input_tokens": 19,
+      "output_tokens": 0,
+      "total_tokens": 19
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 390.1213999997708,
+    "usage": {
+      "input_tokens": 10,
+      "output_tokens": 0,
+      "total_tokens": 10
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 835.177199998725,
+    "usage": {
+      "input_tokens": 19,
+      "output_tokens": 0,
+      "total_tokens": 19
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "embedding",
+    "ok": true,
+    "milliseconds": 708.5033000003023,
+    "usage": {
+      "input_tokens": 12,
+      "output_tokens": 0,
+      "total_tokens": 12
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 3094.5097000003443,
+    "usage": {
+      "input_tokens": 1594,
+      "output_tokens": 0,
+      "total_tokens": 1594
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 2605.3412000001117,
+    "usage": {
+      "input_tokens": 1610,
+      "output_tokens": 0,
+      "total_tokens": 1610
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 2124.6639999990293,
+    "usage": {
+      "input_tokens": 1626,
+      "output_tokens": 0,
+      "total_tokens": 1626
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1521.5872000007948,
+    "usage": {
+      "input_tokens": 1594,
+      "output_tokens": 0,
+      "total_tokens": 1594
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1335.4471000020567,
+    "usage": {
+      "input_tokens": 1482,
+      "output_tokens": 0,
+      "total_tokens": 1482
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1454.023700000107,
+    "usage": {
+      "input_tokens": 1498,
+      "output_tokens": 0,
+      "total_tokens": 1498
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1840.893499997037,
+    "usage": {
+      "input_tokens": 1562,
+      "output_tokens": 0,
+      "total_tokens": 1562
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1343.811499998992,
+    "usage": {
+      "input_tokens": 1626,
+      "output_tokens": 0,
+      "total_tokens": 1626
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1352.7184000013222,
+    "usage": {
+      "input_tokens": 777,
+      "output_tokens": 0,
+      "total_tokens": 777
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1348.7395999982255,
+    "usage": {
+      "input_tokens": 853,
+      "output_tokens": 0,
+      "total_tokens": 853
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1295.3121999998984,
+    "usage": {
+      "input_tokens": 678,
+      "output_tokens": 0,
+      "total_tokens": 678
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 3137.8889000006893,
+    "usage": {
+      "input_tokens": 930,
+      "output_tokens": 0,
+      "total_tokens": 930
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 2297.940700002073,
+    "usage": {
+      "input_tokens": 1103,
+      "output_tokens": 0,
+      "total_tokens": 1103
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1686.47879999844,
+    "usage": {
+      "input_tokens": 750,
+      "output_tokens": 0,
+      "total_tokens": 750
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 2310.58320000011,
+    "usage": {
+      "input_tokens": 614,
+      "output_tokens": 0,
+      "total_tokens": 614
+    },
+    "retries": 0,
+    "error_kind": null
+  },
+  {
+    "operation": "rerank",
+    "ok": true,
+    "milliseconds": 1623.8344000012148,
+    "usage": {
+      "input_tokens": 626,
+      "output_tokens": 0,
+      "total_tokens": 626
+    },
+    "retries": 0,
+    "error_kind": null
+  }
+]

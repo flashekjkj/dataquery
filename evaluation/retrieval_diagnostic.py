@@ -15,6 +15,8 @@ from observability import logger
 
 def main():
     logger.remove()
+    if settings.RERANK_BACKEND != 'local':
+        raise SystemExit('此旧诊断入口只允许本地重排。API消融请运行 backend 目录中的 python -m evaluation.retrieval_benchmark dev，结果见 evaluation/retrieval-v2。')
     cache=json.loads((ROOT/'embedding_cache.json').read_text())
 
     class CacheOnlyClient(ModelClient):
@@ -35,6 +37,7 @@ def main():
 
     hybrid=build_hybrid_index(CacheOnlyClient())
     records=[]
+    skipped=[]
     for line in (ROOT/'datasets'/'dev.jsonl').read_text(encoding='utf-8').splitlines():
         case=json.loads(line)
         # 多任务/多轮真实检索输入是子任务/改写结果，单独诊断仅用首轮单查询。
@@ -43,13 +46,12 @@ def main():
         query=case['question']
         required=set(case['required_fields'])
         try:
-            runs={
-                'bm25':hybrid.bm25_index.retrieve(query,8),
-                'vector':hybrid.vector_index.retrieve(query,8),
-                'hybrid':hybrid.retrieve(query,top_k=8,use_rerank=False),
-                'rerank':hybrid.retrieve(query,top_k=8,use_rerank=True),
-            }
+            runs={}
+            for variant in ('bm25','vector','hybrid','rerank'):
+                hybrid.config=hybrid.config.model_copy(update={'strategy':variant})
+                runs[variant]=hybrid.retrieve(query,top_k=8)
         except KeyError:
+            skipped.append(case['id'])
             continue
         for variant,result in runs.items():
             found={doc.doc_id for doc,_ in result}
@@ -65,7 +67,7 @@ def main():
                           'recall_at_3':sum(r['recall_at_3'] for r in rows)/len(rows) if rows else None,
                           'mrr':sum(r['mrr'] for r in rows)/len(rows) if rows else None,
                           'all_fields_rate':sum(r['all_fields'] for r in rows)/len(rows) if rows else None}
-    (ROOT/'retrieval-diagnostic.json').write_text(json.dumps({'summary':summary,'rows':records},ensure_ascii=False,indent=2),encoding='utf-8')
+    (ROOT/'retrieval-diagnostic-current.json').write_text(json.dumps({'summary':summary,'rows':records,'skipped':skipped},ensure_ascii=False,indent=2),encoding='utf-8')
     print(summary)
 
 

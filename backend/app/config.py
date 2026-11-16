@@ -1,12 +1,13 @@
 from pydantic_settings import BaseSettings,SettingsConfigDict
 from pathlib import Path
+from typing import Literal
 
 # 获取backend目录
 BASE_DIR = Path(__file__).parent.parent
 ENV_FILE_PATH = BASE_DIR / ".env"
 
 class Settings(BaseSettings):
-    """LLL相关配置"""
+    """LLM相关配置"""
     LLM_BASE_URL:str
     LLM_API_KEY:str
     LLM_MODEL_ID:str
@@ -14,6 +15,11 @@ class Settings(BaseSettings):
     LLM_EMBEDDING_MODEL:str
     # 本地rerank模型（可选，默认bge-reranker-base，需已下载到本地HF缓存）
     RERANK_MODEL_ID:str = "BAAI/bge-reranker-base"
+    RERANK_BACKEND: Literal['local','dashscope'] = 'local'
+    RERANK_API_MODEL: str = 'qwen3-rerank'
+    RERANK_API_URL: str = 'https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank'
+    RERANK_API_KEY: str = ''
+    RERANK_TIMEOUT: float = 30
 
     # ===== LLM 失败治理 =====
     # 单次 LLM 调用的最大尝试次数（含首次，默认 3 次 = 最多重试 2 次）
@@ -37,6 +43,8 @@ class Settings(BaseSettings):
     # /metrics 端点开关
     METRICS_ENABLED:bool = True
     DATA_SOURCE_FILE:str = ""
+    RETRIEVAL_STRATEGY: str = "adaptive"
+    RETRIEVAL_LEXICAL_WEIGHT: float = 0.35
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,

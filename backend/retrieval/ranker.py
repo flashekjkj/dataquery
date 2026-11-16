@@ -2,10 +2,26 @@ from __future__ import annotations
 from typing import List,Tuple,Dict
 import jieba
 import math
+import re
 #from rank_bm25 import BM25Okapi
 
 from retrieval.store import FieldDocument
 from app.model_client import ModelClient
+
+
+def tokenize(text: str) -> List[str]:
+    """保留完整标识符并拆分 snake_case，清除标点和常见问句虚词。"""
+    stopwords = {"的", "了", "是", "有", "多少", "请", "查询", "返回", "按", "和", "及", "统计"}
+    words = []
+    chunks = re.findall(r'[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*|[\u4e00-\u9fff]+|\d+',text.lower())
+    for chunk in chunks:
+        if re.fullmatch(r'[a-z][a-z0-9_.]*',chunk):
+            words.append(chunk)
+            if '_' in chunk or '.' in chunk:
+                words.extend(part for part in re.split(r'[_.]',chunk) if part)
+        else:
+            words.extend(token for token in jieba.lcut(chunk) if token not in stopwords)
+    return words
 
 class MyBM25Okapi:
     def __init__(self,corpus:List[List[str]],k1:float = 1.5,b:float = 0.75):
@@ -85,7 +101,7 @@ class BM25Index:
         """构建BM25索引"""
         self.docs = documents
         # 中文分词
-        self.tokenized_corpus = [jieba.lcut(doc.keyword_text) for doc in self.docs]
+        self.tokenized_corpus = [tokenize(doc.keyword_text) for doc in self.docs]
         self.bm25 = MyBM25Okapi(self.tokenized_corpus)
         self._built = True
 
@@ -93,16 +109,18 @@ class BM25Index:
         """BM25检索，返回[(doc,scores)]"""
         if not self._built or self.bm25 is None:
             raise RuntimeError("BM25Index未build，请先调用build()")
-        tokenized_query = jieba.lcut(query)
+        tokenized_query = tokenize(query)
         scores = self.bm25.get_scores(tokenized_query)
-        scored_docs = list(zip(self.docs,scores))
+        scored_docs = [(doc, score) for doc, score in zip(self.docs, scores) if score > 0]
         scored_docs.sort(key=lambda x:x[1],reverse=True)
         return scored_docs[:top_k]
 
 def reciprocal_rank_fusion(
         bm25_results:List[Tuple[FieldDocument,float]],
         vector_results:List[Tuple[FieldDocument,float]],
-        k:int = 60
+        k:int = 60,
+        bm25_weight:float = 1.0,
+        vector_weight:float = 1.0,
 ) -> List[Tuple[FieldDocument,float]]:
     """
     RRF倒数排名融合
@@ -115,7 +133,9 @@ def reciprocal_rank_fusion(
     for rank,(doc,_score) in enumerate(bm25_results):
         doc_id = doc.doc_id
         doc_map[doc_id] = doc
-        rrf_score = 1.0 / (k + rank + 1)
+        if bm25_weight <= 0:
+            continue
+        rrf_score = bm25_weight / (k + rank + 1)
         if doc_id in rrf_map:
             rrf_map[doc_id] += rrf_score
         else:
@@ -125,7 +145,9 @@ def reciprocal_rank_fusion(
     for rank,(doc,_score) in enumerate(vector_results):
         doc_id = doc.doc_id
         doc_map[doc_id] = doc
-        rrf_score = 1.0 / (k + rank + 1)
+        if vector_weight <= 0:
+            continue
+        rrf_score = vector_weight / (k + rank + 1)
         if doc_id in rrf_map:
             rrf_map[doc_id] += rrf_score
         else:
@@ -138,7 +160,8 @@ def reciprocal_rank_fusion(
 def rerank_candidates(
         model_client:ModelClient,
         query:str,
-        candidates:List[Tuple[FieldDocument,float]]
+        candidates:List[Tuple[FieldDocument,float]],
+        diagnostics=None,
 ) -> List[Tuple[FieldDocument,float]]:
         """
         对RRF输出的候选集合执行重排
@@ -149,6 +172,8 @@ def rerank_candidates(
         """
         doc_texts = [item[0].semantic_text for item in candidates]
         rerank_resp = model_client.rerank(query=query,documents=doc_texts)
+        if diagnostics is not None:
+            diagnostics['rerank_degraded'] = rerank_resp.degraded
         rerank_result:List[Tuple[FieldDocument,float]] = []
 
         for item in rerank_resp.results:
@@ -169,9 +194,9 @@ class HybridRetriever:
             self,
             query:str,
             top_k:int = 3,
-            recall_top_k:int = 5,
+            recall_top_k:int = 24,
             use_rerank:bool = False,
-            rerank_candidate_num:int = 8
+            rerank_candidate_num:int = 48
         ) -> List[Tuple[FieldDocument,float]]:
         """
         :param query: 用户自然语言查询
@@ -181,6 +206,7 @@ class HybridRetriever:
         :param rerank_candidate_num: RRF融合后送入rerank的候选条数（6~10）
         """
         # 两路并行召回
+        recall_top_k = max(top_k, recall_top_k)
         bm25_candidates = self.bm25_index.retrieve(query,top_k=recall_top_k)
         vector_candidates = self.vector_index.retrieve(query,top_k=recall_top_k)
 

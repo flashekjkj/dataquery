@@ -7,79 +7,83 @@ const props = defineProps({
 })
 
 const showDebug = ref(false)
+const copyLabel = ref('复制')
 const statusLabels = {
     completed: '协作完成', partial: '部分完成', failed: '执行失败',
     clarification: '需要澄清', approved: '审核通过', unverified: '未通过审核',
     skipped: '已跳过',
 }
 
-function copySql() {
-    navigator.clipboard.writeText(props.msg.sql || '')
+async function copySql() {
+    try {
+        await navigator.clipboard.writeText(props.msg.sql || '')
+        copyLabel.value = '已复制'
+    } catch {
+        copyLabel.value = '复制失败，请手动选择'
+    }
 }
 </script>
 
 <template>
     <div class="bubble-row" :class="msg.role">
+        <div v-if="msg.role === 'assistant'" class="assistant-avatar" aria-hidden="true">A<span>·</span></div>
+        <div class="message-main"><p class="message-author">{{ msg.role === 'user' ? '你' : 'AskData' }}</p>
         <div class="bubble">
             <!-- 加载中状态 -->
-            <p v-if="msg.loading" class="loading">思考中...</p>
-            
+            <p v-if="msg.loading" class="loading" role="status">正在整理思路 <span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
+
             <template v-else>
                 <!-- 指代消解提示：问题被改写时展示 -->
                 <p v-if="msg.rewrittenQuestion && msg.rewrittenQuestion !== msg.content" class="rewrite-hint">
-                    🔄 已理解：{{ msg.rewrittenQuestion }}   
+                    🔄 已理解：{{ msg.rewrittenQuestion }}
                 </p>
 
                 <!-- 回答正文（保留换行） -->
                 <p class="content">{{ msg.content }}</p>
 
-                <details v-if="msg.taskPlan || (msg.collaborationStatus && msg.collaborationStatus !== 'single')" class="collaboration">
-                    <summary>多智能体协作 · {{ statusLabels[msg.collaborationStatus] || msg.collaborationStatus }}</summary>
-                    <p v-if="msg.taskPlan?.assumptions?.length">口径与假设：{{ msg.taskPlan.assumptions.join('；') }}</p>
-                    <ol v-if="msg.taskPlan?.tasks?.length">
-                        <li v-for="task in msg.taskPlan.tasks" :key="task.task_id">
-                            {{ task.task_id }}：{{ task.question }}
-                            <small v-if="task.depends_on.length">（依赖 {{ task.depends_on.join('、') }}）</small>
-                        </li>
-                    </ol>
-                    <details v-for="task in msg.taskResults || []" :key="task.task_id" class="task-card">
-                        <summary>{{ task.task_id }} · {{ statusLabels[task.status] || task.status }} · {{ task.question }}</summary>
-                        <p v-if="task.error">{{ task.error }}</p>
-                        <pre v-if="task.sql">{{ task.sql }}</pre>
-                        <p v-for="(review, i) in task.reviews" :key="i">
-                            审核 {{ i + 1 }}：{{ review.verdict }} {{ review.issues.join('；') }} {{ review.clarification }}
-                        </p>
-                        <ResultTable v-if="task.query_result" :columns="task.query_result.columns" :rows="task.query_result.rows" />
-                        <p v-if="task.query_result?.is_truncated">结果已截断，不能据此确认完整总体。</p>
-                        <details v-if="task.attempts?.length">
-                            <summary>SQL 尝试记录（{{ task.attempts.length }}）</summary>
-                            <pre v-for="(attempt, i) in task.attempts" :key="i">{{ attempt.sql }}{{ attempt.error ? '\n' + attempt.error : '' }}</pre>
-                        </details>
-                    </details>
-                </details>
-                
-                <!--SQL卡片+复制按钮-->
-                <div v-if="msg.sql" class="sql-card">
-                    <div class="sql-head">
-                        <span>SQl</span>
-                        <button @click="copySql">复制</button>
-                    </div>
-                    <pre>{{ msg.sql }}</pre>
-                </div>
-
                 <!--查询结果表格-->
                 <ResultTable
                     v-if="msg.queryResult && msg.queryResult.rows.length"
                     :columns="msg.queryResult.columns"
-                    :rows="msg.queryResult.rows" 
+                    :rows="msg.queryResult.rows"
                 />
 
                 <!--执行细节（可折叠）-->
-                <div v-if="msg.route === 'data'" class="debug">
-                    <button @click="showDebug = !showDebug">
+                <div v-if="msg.route === 'data' || msg.sql || msg.taskPlan || msg.taskResults?.length" class="debug">
+                    <button :aria-expanded="showDebug" @click="showDebug = !showDebug">
                         {{ showDebug ? '收起':'展开' }}执行细节
                     </button>
                     <div v-if="showDebug" class="debug-body">
+                        <div v-if="msg.sql" class="sql-details">
+                            <div class="sql-head"><span>执行 SQL</span><button @click="copySql">{{ copyLabel }}</button></div>
+                            <pre>{{ msg.sql }}</pre>
+                        </div>
+                        <details v-if="msg.taskPlan || (msg.collaborationStatus && msg.collaborationStatus !== 'single')" class="collaboration">
+                            <summary>多智能体协作 · {{ statusLabels[msg.collaborationStatus] || msg.collaborationStatus }}</summary>
+                            <p v-if="msg.taskPlan?.assumptions?.length">口径与假设：{{ msg.taskPlan.assumptions.join('；') }}</p>
+                            <ol v-if="msg.taskPlan?.tasks?.length">
+                                <li v-for="task in msg.taskPlan.tasks" :key="task.task_id">
+                                    {{ task.task_id }}：{{ task.question }}
+                                    <small v-if="task.depends_on.length">（依赖 {{ task.depends_on.join('、') }}）</small>
+                                </li>
+                            </ol>
+                            <details v-for="task in msg.taskResults || []" :key="task.task_id" class="task-card">
+                                <summary>{{ task.task_id }} · {{ statusLabels[task.status] || task.status }} · {{ task.question }}</summary>
+                                <p v-if="task.error">{{ task.error }}</p>
+                                <pre v-if="task.sql">{{ task.sql }}</pre>
+                                <p v-for="(review, i) in task.reviews" :key="i">
+                                    审核 {{ i + 1 }}：{{ review.verdict }} {{ review.issues.join('；') }} {{ review.clarification }}
+                                </p>
+                                <ResultTable v-if="task.query_result" :columns="task.query_result.columns" :rows="task.query_result.rows" />
+                                <p v-if="task.query_result?.is_truncated">结果已截断，不能据此确认完整总体。</p>
+                                <details v-if="task.attempts?.length">
+                                    <summary>SQL 尝试记录（{{ task.attempts.length }}）</summary>
+                                    <pre v-for="(attempt, i) in task.attempts" :key="i">{{ attempt.sql }}{{ attempt.error ? '\n' + attempt.error : '' }}</pre>
+                                </details>
+                            </details>
+                        </details>
+
+
                         <p v-if="msg.activeSkill">生效技能：{{ msg.activeSkill }}</p>
                         <p v-if="msg.retrievedDocs && msg.retrievedDocs.length">命中字段：{{ msg.retrievedDocs.join('、') }}</p>
                         <div v-if="msg.attempts && msg.attempts.length">
@@ -90,34 +94,19 @@ function copySql() {
                 </div>
             </template>
         </div>
+        </div>
     </div>
 </template>
 
 <style scoped>
-.bubble-row {display: flex; margin: 8px 0;}
-.bubble-row.user {justify-content: flex-end;}
-.bubble-row.assistant {justify-content: flex-start;}
-.bubble {
-    max-width: 85%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    line-height: 1.6;
-    font-size: 14px;
-}
-.user .bubble {background: #2563eb;color: #fff;}
-.assistant .bubble {background: #f3f4f6;}
-.content { white-space: pre-wrap; margin: 0; }
-.rewrite-hint { font-size: 12px; color: #6b7280; margin: 0 0 6px; }
-.loading { color: #6b7280; margin: 0; }
-.sql-card { background: #1f2937; color: #e5e7eb; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
-.sql-head { display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
-.sql-head button { background: #374151; color: #e5e7eb; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
-.sql-card pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
-.debug button { background: none; border: none; color: #6b7280; font-size: 12px; cursor: pointer; padding: 0; }
-.debug-body { font-size: 12px; color: #4b5563; }
-.debug-body pre { background: #fff; padding: 6px; border-radius: 6px; overflow-x: auto; }
-.collaboration { margin-top: 12px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
-.collaboration summary { cursor: pointer; }
-.task-card { margin-top: 8px; padding: 8px; background: #fff; border-radius: 6px; }
-.task-card pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble-row { display:flex; align-items:flex-start; gap:13px; margin:0 0 32px; }.bubble-row.user { justify-content:flex-end; }.message-main { min-width:0; max-width:calc(100% - 48px); }.assistant .message-main { flex:1; }.user .message-main { max-width:80%; }
+.message-author { font-size:13px; color:var(--muted); margin-bottom:8px; font-weight:500; }.user .message-author { text-align:right; }
+.assistant-avatar { position:relative; width:32px; height:34px; flex-shrink:0; margin-top:2px; display:grid; place-content:center; background:#e7eefb; color:var(--accent); border-radius:10px; font-weight:700; font-size:22px; line-height:1; }.assistant-avatar span { position:absolute; right:3px; bottom:2px; }
+.bubble { padding:22px 24px; border-radius:15px; line-height:1.8; font-size:17px; overflow-wrap:anywhere; }
+.user .bubble { background:#e9f0fd; color:#2d4a79; border:1px solid #deE8fa; padding:14px 20px; border-top-right-radius:5px; }.assistant .bubble { background:white; border:1px solid var(--line); border-top-left-radius:5px; box-shadow:0 2px 8px #233b5803; }
+.content { white-space:pre-wrap; margin:0; }.rewrite-hint { font-size:13px; color:var(--muted); margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid var(--line); }.loading { color:var(--muted); margin:0; font-size:15px; display:flex; align-items:center; gap:10px; }
+.loading-dots { display:inline-flex; gap:4px; }.loading-dots i { width:4px; height:4px; background:#7d9ccc; border-radius:50%; animation:pulse 1.2s infinite; }.loading-dots i:nth-child(2) { animation-delay:.15s; }.loading-dots i:nth-child(3) { animation-delay:.3s; }@keyframes pulse { 50% { opacity:.25; transform:translateY(-2px); } }
+.debug { margin-top:20px; padding-top:14px; border-top:1px solid var(--line); }.debug button { background:none; border:0; color:#6881a2; font-size:13px; cursor:pointer; padding:2px 0; }.debug button:hover { color:var(--accent); }.debug-body { font-size:14px; color:#52647c; margin-top:14px; }.debug-body p { margin:10px 0; }.debug-body pre { background:#f6f8fb; border:1px solid #e8edf4; padding:14px; border-radius:9px; overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-family:Consolas,monospace; font-size:13px; line-height:1.7; }.sql-head { display:flex; justify-content:space-between; gap:16px; margin-bottom:8px; font-size:13px; color:var(--muted); }.sql-details { margin:12px 0; }
+.collaboration { margin-top:14px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; }.collaboration summary { cursor:pointer; font-size:14px; }.collaboration ol { padding-left:22px; margin-top:10px; }.task-card { margin-top:10px; padding:12px; background:#f8fafc; border-radius:8px; }
+@media(max-width:760px) { .bubble-row { gap:8px; margin-bottom:24px; }.bubble { padding:17px 15px; font-size:16px; }.message-main { max-width:calc(100% - 38px); }.user .message-main { max-width:92%; }.assistant-avatar { width:28px; height:30px; font-size:20px; } }
 </style>

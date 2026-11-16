@@ -1,11 +1,14 @@
 from __future__ import annotations
 import math
+import re
+import time
 from typing import List,Tuple
 
 from .store import FieldDocument,SchemaStore
 from app.model_client import ModelClient
 from datasources.demo import demo_query_context
 from retrieval.ranker import BM25Index,HybridRetriever
+from retrieval.config import RetrievalConfig
 
 def cosine_similarity(vec_a:List[float],vec_b:List[float]) -> float:
     """计算余弦相似度"""
@@ -65,7 +68,10 @@ class SchemaIndex:
         query_emb = self.model_client.embedding(query)
         query_vec = query_emb.vector
 
-        # 计算余弦相似度
+        return self.rank_vector(query_vec, top_k)
+
+    def rank_vector(self, query_vec, top_k):
+        """一次请求共用查询向量，避免表召回和字段召回重复调用Embedding。"""
         score_list:List[Tuple[FieldDocument,float]] = []
         for doc,vec in zip(self.documents,self.vectors):
             score = cosine_similarity(query_vec,vec)
@@ -75,7 +81,7 @@ class SchemaIndex:
         score_list.sort(key=lambda x: x[1],reverse=True)
         return score_list[:top_k]
 
-def build_hybrid_index(model_client:ModelClient, query_context=None, cache=None) -> HybridRetriever:
+def build_hybrid_index(model_client:ModelClient, query_context=None, cache=None, config=None) -> HybridRetriever:
     # 构建向量索引
     vec_index = SchemaIndex(model_client, query_context, cache)
     vec_index.build()
@@ -84,15 +90,18 @@ def build_hybrid_index(model_client:ModelClient, query_context=None, cache=None)
     bm25_index = BM25Index()
     bm25_index.build(all_docs)
 
-    hybrid_retriever = CandidateRetriever(vec_index,bm25_index,model_client)
+    hybrid_retriever = CandidateRetriever(vec_index,bm25_index,model_client,config)
     hybrid_retriever.query_context = vec_index.query_context
     return hybrid_retriever
 
 
 class CandidateRetriever(HybridRetriever):
     """先以表向量召回，再在候选内混合召回字段；有限补桥，不转为全目录提示。"""
-    def __init__(self,vector_index,bm25_index,client):
+    def __init__(self,vector_index,bm25_index,client,config=None):
         super().__init__(vector_index,bm25_index,client)
+        from app.config import settings
+        self.config = config or RetrievalConfig(strategy=settings.RETRIEVAL_STRATEGY,
+                                                lexical_weight=settings.RETRIEVAL_LEXICAL_WEIGHT)
         self.query_context=vector_index.query_context
         self.tables=self.query_context.snapshot.tables
         self.table_vectors=[]
@@ -104,10 +113,11 @@ class CandidateRetriever(HybridRetriever):
         if vector_index.cache:
             vector_index.cache.prune(vector_index.namespace,{d.doc_id for d in vector_index.documents}|{'table:'+t.id for t in self.tables})
 
-    def candidate_tables(self,question,top_k=3):
+    def candidate_tables(self,question,top_k=None,query_vector=None):
         if not self.tables:
             return set()
-        vector=self.model_client.embedding(question).vector
+        top_k = top_k or self.config.table_k
+        vector=query_vector if query_vector is not None else self.model_client.embedding(question).vector
         ranked=sorted(zip(self.tables,self.table_vectors),key=lambda x:cosine_similarity(vector,x[1]),reverse=True)
         selected={t.id for t,_ in ranked[:top_k]}
         for name,metric in self.query_context.semantics.get('metrics',{}).items():
@@ -122,18 +132,62 @@ class CandidateRetriever(HybridRetriever):
                 for bridge in sorted(links.get(a,set()) & links.get(b,set())):
                     if len(selected)<6:
                         selected.add(bridge)
-        return set(sorted(selected)[:6])
+        # 优先保留向量排名，避免按表名字母序截断导致强相关表丢失。
+        ordered = [t.id for t,_ in ranked if t.id in selected]
+        return set(ordered[:6])
 
-    def retrieve(self,query,top_k=3,use_rerank=False,**kwargs):
+    def retrieve(self,query,top_k=3,use_rerank=None,table_scope=None,**kwargs):
+        result, diagnostics = self.retrieve_with_diagnostics(query, top_k, use_rerank, table_scope)
+        from observability.tracer import record_span
+        record_span('schema_retrieval', 'tool', diagnostics['milliseconds'], diagnostics)
+        return result
+
+    def retrieve_with_diagnostics(self,query,top_k=8,use_rerank=None,table_scope=None):
         from retrieval.ranker import reciprocal_rank_fusion,rerank_candidates
-        selected=self.candidate_tables(query)
+        started = time.perf_counter()
+        if top_k < 1:
+            raise ValueError('top_k必须大于0')
+        vector = self.model_client.embedding(query).vector
+        selected=self.candidate_tables(query,query_vector=vector)
+        if table_scope is not None:
+            selected.intersection_update(table_scope)
         total=len(self.vector_index.documents)
-        bm=[x for x in self.bm25_index.retrieve(query,top_k=total) if x[0].table_name in selected][:max(top_k,8)]
-        vec=[x for x in self.vector_index.retrieve(query,top_k=total) if x[0].table_name in selected][:max(top_k,8)]
-        result=reciprocal_rank_fusion(bm,vec)
-        if use_rerank and result:
-            result=rerank_candidates(self.model_client,query,result[:max(top_k,8)])
-        return result[:top_k]
+        recall_k = max(top_k, self.config.recall_k)
+        bm=[x for x in self.bm25_index.retrieve(query,top_k=total) if x[0].table_name in selected][:recall_k]
+        vec=[x for x in self.vector_index.rank_vector(vector,total) if x[0].table_name in selected][:recall_k]
+        strategy = self.config.strategy
+        weight = 1.0 if strategy in ('hybrid','rerank') else self.config.lexical_weight
+        if strategy == 'adaptive' and not self._has_exact_match(query, bm):
+            weight = 0.0
+        if strategy == 'vector':
+            weight = 0.0
+        vector_weight = 0.0 if strategy == 'bm25' else 1.0
+        if strategy == 'bm25':
+            weight = 1.0
+        result=reciprocal_rank_fusion(bm,vec,k=self.config.rrf_k,
+                                      bm25_weight=weight,vector_weight=vector_weight)
+        def serialize(items):
+            return [{'id':doc.doc_id,'score':score} for doc,score in items]
+        diagnostics = {'strategy':strategy,'selected_tables':sorted(selected),
+                       'lexical_weight':weight,'recall_k':recall_k,
+                       'bm25':serialize(bm),'vector':serialize(vec),'fusion':serialize(result),
+                       'rerank_requested':strategy == 'rerank' if use_rerank is None else use_rerank,
+                       'rerank_degraded':False}
+        if diagnostics['rerank_requested'] and result:
+            result=rerank_candidates(self.model_client,query,result[:max(top_k,self.config.rerank_k)],diagnostics)
+        diagnostics['final'] = serialize(result[:top_k])
+        diagnostics['milliseconds'] = (time.perf_counter()-started)*1000
+        return result[:top_k], diagnostics
+
+    @staticmethod
+    def _has_exact_match(query, candidates):
+        query = query.lower()
+        for doc,_ in candidates:
+            if re.search(r'(?<![\w])'+re.escape(doc.field_name.lower())+r'(?![\w])',query):
+                return True
+            if any(len(term)>=2 and term.lower() in query for term in [doc.field_label,*doc.aliases]):
+                return True
+        return False
 
     def prompt_metadata(self,question):
         selected=self.candidate_tables(question)

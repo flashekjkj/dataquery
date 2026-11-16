@@ -1,0 +1,52 @@
+{
+  "agent": {
+    "vector": {
+      "n": 8,
+      "correct": 7,
+      "accuracy": 0.875,
+      "sql_table_path_coverage": 0.875,
+      "p50_seconds": 18.630504500000825,
+      "provider_failures": [
+        {
+          "id": "holdout-demo-043",
+          "operation": "generate_sql",
+          "kind": "timeout"
+        }
+      ],
+      "known_tokens": 15704,
+      "unknown_usage_calls": 1
+    },
+    "selected": {
+      "n": 8,
+      "correct": 7,
+      "accuracy": 0.875,
+      "sql_table_path_coverage": 0.875,
+      "p50_seconds": 19.2972403499989,
+      "provider_failures": [
+        {
+          "id": "holdout-demo-043",
+          "operation": "generate_sql",
+          "kind": "timeout"
+        }
+      ],
+      "known_tokens": 16137,
+      "unknown_usage_calls": 1
+    }
+  },
+  "rerank_api": {
+    "dev": {
+      "calls": 40,
+      "successful": 39,
+      "known_tokens": 54898,
+      "unknown_usage_calls": 1
+    },
+    "holdout": {
+      "calls": 16,
+      "successful": 16,
+      "known_tokens": 18923,
+      "unknown_usage_calls": 0
+    }
+  },
+  "frozen_retrieval_unchanged": true,
+  "agent_adapter_amendment_verified": true
+}

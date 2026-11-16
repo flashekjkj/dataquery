@@ -163,12 +163,15 @@ def run(args):
     started=time.perf_counter()
     hybrid=build_hybrid_index(client)
     class Retrieval:
+        query_context = hybrid.query_context
+        config = hybrid.config.model_copy(update={'strategy':args.retrieval})
+
+        def prompt_metadata(self,question):
+            return hybrid.prompt_metadata(question)
+
         def retrieve(self,query,top_k=8,**kwargs):
-            if args.retrieval=='bm25':
-                return hybrid.bm25_index.retrieve(query,top_k)
-            if args.retrieval=='vector':
-                return hybrid.vector_index.retrieve(query,top_k)
-            return hybrid.retrieve(query,top_k=top_k,use_rerank=args.retrieval=='rerank')
+            return hybrid.retrieve(query,top_k=top_k,**kwargs)
+    hybrid.config = hybrid.config.model_copy(update={'strategy':args.retrieval})
     retriever=Retrieval()
     if args.retrieval=='rerank':
         client.rerank('预热', ['字段预热'])
@@ -230,7 +233,7 @@ if __name__=='__main__':
     parser.add_argument('--split',choices=['smoke','dev','holdout'],default='smoke')
     parser.add_argument('--name',default='smoke-baseline')
     parser.add_argument('--mode',choices=['single','multi','auto'])
-    parser.add_argument('--retrieval',choices=['bm25','vector','hybrid','rerank'],default='rerank')
+    parser.add_argument('--retrieval',choices=['bm25','vector','hybrid','weighted','adaptive','rerank'],default='adaptive')
     parser.add_argument('--limit',type=int)
     parser.add_argument('--case-ids')
     parser.add_argument('--api-timeout',type=int)

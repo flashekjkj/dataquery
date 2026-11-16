@@ -1,0 +1,1459 @@
+{
+  "demo": {
+    "snapshot": {
+      "source_id": "demo",
+      "dialect": "duckdb",
+      "tables": [
+        {
+          "id": "customers",
+          "name": "customers",
+          "schema_name": "main",
+          "description": "存储电商客户基础信息，可与订单表关联查询客户下单情况",
+          "primary_key": [
+            "customer_id"
+          ],
+          "fields": [
+            {
+              "name": "customer_id",
+              "type": "整数",
+              "nullable": true,
+              "label": "客户编号",
+              "description": "客户唯一标识，订单表通过该字段关联客户",
+              "aliases": [
+                "客户ID"
+              ],
+              "role": "identifier"
+            },
+            {
+              "name": "customer_name",
+              "type": "文本",
+              "nullable": true,
+              "label": "客户名称",
+              "description": "客户姓名",
+              "aliases": [
+                "客户名"
+              ],
+              "role": "dimension"
+            },
+            {
+              "name": "customer_level",
+              "type": "文本",
+              "nullable": true,
+              "label": "客户等级",
+              "description": "客户等级：战略客户/重点客户/普通客户",
+              "aliases": [
+                "等级",
+                "客户分层"
+              ],
+              "role": "dimension"
+            },
+            {
+              "name": "region",
+              "type": "文本",
+              "nullable": true,
+              "label": "所在地区",
+              "description": "客户所在地区",
+              "aliases": [
+                "地区",
+                "区域"
+              ],
+              "role": "dimension"
+            }
+          ]
+        },
+        {
+          "id": "products",
+          "name": "products",
+          "schema_name": "main",
+          "description": "电商商品基础信息，包含商品名称、品类，可关联订单表统计商品销量",
+          "primary_key": [
+            "product_id"
+          ],
+          "fields": [
+            {
+              "name": "product_id",
+              "type": "整数",
+              "nullable": true,
+              "label": "产品编号",
+              "description": "产品唯一标识，订单表通过该字段关联商品",
+              "aliases": [
+                "产品ID",
+                "商品ID"
+              ],
+              "role": "identifier"
+            },
+            {
+              "name": "product_name",
+              "type": "文本",
+              "nullable": true,
+              "label": "产品名称",
+              "description": "商品名称",
+              "aliases": [
+                "商品名"
+              ],
+              "role": "dimension"
+            },
+            {
+              "name": "category",
+              "type": "文本",
+              "nullable": true,
+              "label": "产品类别",
+              "description": "商品所属品类",
+              "aliases": [
+                "品类",
+                "产品类型"
+              ],
+              "role": "dimension"
+            }
+          ]
+        },
+        {
+          "id": "orders",
+          "name": "orders",
+          "schema_name": "main",
+          "description": "电商订单交易明细，记录每一笔订单的时间、金额，冗余了地区与品类信息，关联客户与商品",
+          "primary_key": [
+            "order_id"
+          ],
+          "fields": [
+            {
+              "name": "order_id",
+              "type": "整数",
+              "nullable": true,
+              "label": "订单编号",
+              "description": "订单唯一编号",
+              "aliases": [
+                "订单号"
+              ],
+              "role": "identifier"
+            },
+            {
+              "name": "order_date",
+              "type": "日期",
+              "nullable": true,
+              "label": "下单日期",
+              "description": "订单创建日期 YYYY-MM-DD",
+              "aliases": [
+                "下单时间",
+                "成交日期"
+              ],
+              "role": "time"
+            },
+            {
+              "name": "region",
+              "type": "文本",
+              "nullable": true,
+              "label": "所在地区",
+              "description": "订单客户所在地区（冗余自客户表，便于直接按地区统计）",
+              "aliases": [
+                "地区",
+                "区域"
+              ],
+              "role": "dimension"
+            },
+            {
+              "name": "category",
+              "type": "文本",
+              "nullable": true,
+              "label": "商品品类",
+              "description": "订单商品所属品类（冗余自商品表，便于直接按品类统计）",
+              "aliases": [
+                "品类",
+                "产品类型"
+              ],
+              "role": "dimension"
+            },
+            {
+              "name": "order_amount",
+              "type": "数值",
+              "nullable": true,
+              "label": "订单总金额",
+              "description": "订单商品总金额",
+              "aliases": [
+                "订单金额"
+              ],
+              "role": "metric"
+            },
+            {
+              "name": "paid_amount",
+              "type": "数值",
+              "nullable": true,
+              "label": "实付金额",
+              "description": "客户实际支付金额",
+              "aliases": [
+                "实付",
+                "销售额"
+              ],
+              "role": "metric"
+            },
+            {
+              "name": "status",
+              "type": "文本",
+              "nullable": true,
+              "label": "订单状态",
+              "description": "订单状态：已支付/已取消/已退款",
+              "aliases": [
+                "支付状态"
+              ],
+              "role": "filter"
+            },
+            {
+              "name": "customer_id",
+              "type": "整数",
+              "nullable": true,
+              "label": "客户编号",
+              "description": "关联客户表的客户id",
+              "aliases": [
+                "客户ID"
+              ],
+              "role": "foreign_key"
+            },
+            {
+              "name": "product_id",
+              "type": "整数",
+              "nullable": true,
+              "label": "产品编号",
+              "description": "关联商品表的商品id",
+              "aliases": [
+                "商品ID"
+              ],
+              "role": "foreign_key"
+            }
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "left_table": "orders",
+          "left_field": "customer_id",
+          "right_table": "customers",
+          "right_field": "customer_id",
+          "description": "订单归属的客户，orders.customer_id关联customers.customer_id"
+        },
+        {
+          "left_table": "orders",
+          "left_field": "product_id",
+          "right_table": "products",
+          "right_field": "product_id",
+          "description": "订单购买的商品，orders.product_id关联products.product_id"
+        }
+      ]
+    },
+    "policy_version": "",
+    "semantic_version": "",
+    "semantics": {
+      "metrics": {
+        "sales": {
+          "tables": [
+            "orders"
+          ],
+          "expression": "SUM(paid_amount)",
+          "description": "销售额按实付金额统计",
+          "unit": "",
+          "grain": [],
+          "time_field": "order_date",
+          "filters": []
+        },
+        "order_count": {
+          "tables": [
+            "orders"
+          ],
+          "expression": "COUNT(*)",
+          "description": "订单数量",
+          "unit": "",
+          "grain": [],
+          "time_field": "order_date",
+          "filters": []
+        },
+        "customer_count": {
+          "tables": [
+            "customers"
+          ],
+          "expression": "COUNT(DISTINCT customer_id)",
+          "description": "去重客户数",
+          "unit": "",
+          "grain": [],
+          "time_field": null,
+          "filters": []
+        }
+      },
+      "joins": {
+        "join_0": {
+          "left": "orders",
+          "right": "customers",
+          "keys": [
+            [
+              "customer_id",
+              "customer_id"
+            ]
+          ],
+          "cardinality": "many_to_one"
+        },
+        "join_1": {
+          "left": "orders",
+          "right": "products",
+          "keys": [
+            [
+              "product_id",
+              "product_id"
+            ]
+          ],
+          "cardinality": "many_to_one"
+        }
+      },
+      "time_fields": {
+        "orders": "order_date"
+      }
+    }
+  },
+  "company": {
+    "snapshot": {
+      "source_id": "company",
+      "dialect": "duckdb",
+      "tables": [
+        {
+          "id": "\"hr\".\"applications\"",
+          "name": "applications",
+          "schema_name": "hr",
+          "description": "招聘申请，每个求职者提交的岗位申请记录",
+          "primary_key": [
+            "application_id"
+          ],
+          "fields": [
+            {
+              "name": "application_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "申请编号",
+              "description": "申请编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "vacancy_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "岗位编号外键",
+              "description": "岗位编号外键",
+              "aliases": [],
+              "role": "foreign_key"
+            },
+            {
+              "name": "pipeline_stage",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "招聘阶段 offer/interview/rejected",
+              "description": "招聘阶段 offer/interview/rejected",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "applied_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "申请日期",
+              "description": "申请日期",
+              "aliases": [],
+              "role": "time"
+            }
+          ]
+        },
+        {
+          "id": "\"hr\".\"vacancies\"",
+          "name": "vacancies",
+          "schema_name": "hr",
+          "description": "正在招聘的岗位职位，关联部门",
+          "primary_key": [
+            "vacancy_id"
+          ],
+          "fields": [
+            {
+              "name": "vacancy_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "岗位编号",
+              "description": "岗位编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "role_title",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "岗位职位名称",
+              "description": "岗位职位名称",
+              "aliases": [],
+              "role": "dimension"
+            },
+            {
+              "name": "department_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "部门编号外键",
+              "description": "部门编号外键",
+              "aliases": [],
+              "role": "foreign_key"
+            }
+          ]
+        },
+        {
+          "id": "\"org\".\"departments\"",
+          "name": "departments",
+          "schema_name": "org",
+          "description": "企业组织部门",
+          "primary_key": [
+            "department_id"
+          ],
+          "fields": [
+            {
+              "name": "department_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "部门编号",
+              "description": "部门编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "department_name",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "部门名称",
+              "description": "部门名称",
+              "aliases": [],
+              "role": "dimension"
+            }
+          ]
+        },
+        {
+          "id": "\"finance\".\"billing\"",
+          "name": "billing",
+          "schema_name": "finance",
+          "description": "财务收款发票，与招聘无关",
+          "primary_key": [
+            "invoice_id"
+          ],
+          "fields": [
+            {
+              "name": "invoice_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "发票编号",
+              "description": "发票编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "paid_amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "收款金额",
+              "description": "收款金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"finance\".\"refunds\"",
+          "name": "refunds",
+          "schema_name": "finance",
+          "description": "财务退款，与招聘无关",
+          "primary_key": [
+            "refund_id"
+          ],
+          "fields": [
+            {
+              "name": "refund_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "退款编号",
+              "description": "退款编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "refund_amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "退款金额",
+              "description": "退款金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_00\"",
+          "name": "activity_00",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区0，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_01\"",
+          "name": "activity_01",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区1，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_02\"",
+          "name": "activity_02",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区2，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_03\"",
+          "name": "activity_03",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区3，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_04\"",
+          "name": "activity_04",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区4，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_05\"",
+          "name": "activity_05",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区5，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_06\"",
+          "name": "activity_06",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区6，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_07\"",
+          "name": "activity_07",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区7，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_08\"",
+          "name": "activity_08",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区8，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_09\"",
+          "name": "activity_09",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区9，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_10\"",
+          "name": "activity_10",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区10，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_11\"",
+          "name": "activity_11",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区11，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_12\"",
+          "name": "activity_12",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区12，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_13\"",
+          "name": "activity_13",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区13，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_14\"",
+          "name": "activity_14",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区14，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_15\"",
+          "name": "activity_15",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区15，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_16\"",
+          "name": "activity_16",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区16，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_17\"",
+          "name": "activity_17",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区17，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_18\"",
+          "name": "activity_18",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区18，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        },
+        {
+          "id": "\"analytics\".\"activity_19\"",
+          "name": "activity_19",
+          "schema_name": "analytics",
+          "description": "网站活动日志分区19，业务状态和活动金额，非招聘记录",
+          "primary_key": [
+            "event_id"
+          ],
+          "fields": [
+            {
+              "name": "event_id",
+              "type": "INTEGER",
+              "nullable": true,
+              "label": "活动编号",
+              "description": "活动编号",
+              "aliases": [],
+              "role": "identifier"
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR",
+              "nullable": true,
+              "label": "活动状态",
+              "description": "活动状态",
+              "aliases": [],
+              "role": "filter"
+            },
+            {
+              "name": "created_at",
+              "type": "DATE",
+              "nullable": true,
+              "label": "活动日期",
+              "description": "活动日期",
+              "aliases": [],
+              "role": "time"
+            },
+            {
+              "name": "amount",
+              "type": "DOUBLE",
+              "nullable": true,
+              "label": "活动金额",
+              "description": "活动金额",
+              "aliases": [],
+              "role": "metric"
+            }
+          ]
+        }
+      ],
+      "relations": []
+    },
+    "policy_version": "",
+    "semantic_version": "",
+    "semantics": {
+      "joins": {
+        "application_vacancy": {
+          "left": "\"hr\".\"applications\"",
+          "right": "\"hr\".\"vacancies\"",
+          "keys": [
+            [
+              "vacancy_id",
+              "vacancy_id"
+            ]
+          ]
+        },
+        "vacancy_department": {
+          "left": "\"hr\".\"vacancies\"",
+          "right": "\"org\".\"departments\"",
+          "keys": [
+            [
+              "department_id",
+              "department_id"
+            ]
+          ]
+        }
+      },
+      "time_fields": {
+        "\"hr\".\"applications\"": "applied_at"
+      }
+    }
+  }
+}
