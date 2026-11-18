@@ -1,144 +1,176 @@
-# AskData —— 自然语言数据查询 Agent
+<h2 align="center">
+  <img src="docs/assets/askdata-icon.png" width="72" height="72" alt="AskData 项目图标" /><br />
+  <sub>AskData</sub><br />
+  用自然语言，读懂数据。
+</h2>
 
-评测入口：首版业务标注集、固定夹具、离线回归及真实模型运行器见 [evaluation/README.md](evaluation/README.md)。正式留出集报告见 [evaluation/report.md](evaluation/report.md)。
+AskData 是基于 LangGraph 的自然语言数据查询 Agent，支持 DuckDB 与 PostgreSQL。通过 Schema 检索、SQL 生成、只读执行和失败修复，将业务问题转为可核对的查询结果、文字回答与可视化图表；支持多轮对话、自动选择单/多智能体路径及 MCP 工具调用。
 
-新增：支持协调 Agent、查询 Agent 和审核 Agent 的有界串行协作，保留单智能体快速路径。
+<p align="center">
+  <a href="#运行界面">运行界面</a> · <a href="#核心特性">核心特性</a> · <a href="#系统架构">系统架构</a> · <a href="#项目评测">项目评测</a> · <a href="#quick-start">快速开始</a>
+</p>
 
-用户入口统一自动路由：有明确复杂任务信号时使用多智能体，其余默认单智能体；单智能体耗尽SQL修复次数仍失败后，升级一次多智能体。规划无法解析时先回退单路尝试，升级后不再循环切换。前端和CLI不提供模式选择，HTTP请求不接受execution_mode字段（返回422）。内部模式参数仅保留给离线评测与回归测试。
+## 运行界面
 
-数据源已支持DuckDB与PostgreSQL，使用统一SchemaSnapshot和QueryContext驱动检索、规划、审核和SQL生成；PG支持同库跨schema。通过服务端DATA_SOURCE_FILE切换，配置与验收步骤见[数据源说明](backend/datasources/README.md)。
+**开始界面**
 
-数据源治理已加入表/列Policy、可覆盖语义配置、指标Skill、一致快照、局部向量缓存和候选表召回；新外部源默认拒绝访问，需要显式配置Policy。切换、刷新和五类离线评测包说明见[治理与验收](backend/datasources/GOVERNANCE.md)。
-前端可选择执行模式并查看任务 SQL、结果和审核记录。架构、使用方式与验证命令见 [MULTI_AGENT.md](MULTI_AGENT.md)。
+![开始界面](frontend/UI/start.png)
 
-一个基于 LangGraph 的 Text2SQL 数据问答系统：用户用自然语言提问（如"华东地区上月销售额多少"），Agent 自动完成 **Schema 检索 → SQL 生成 → 只读执行 → 失败自修复 → 自然语言回答** 的全链路，并支持多轮对话记忆、技能系统与 MCP 工具生态。
+**示例会话1**
 
-> 项目动机：面向 Agent 岗位的工程实践项目，覆盖 Schema Linking、混合检索、Text2SQL 自修复、LangGraph 状态机、上下文工程、Skill、MCP 协议等 Agent 核心技术栈。
+![示例会话1](frontend/UI/chat1.png)
 
----
+**示例会话2**
 
-## ✨ 核心特性
+![示例会话2](frontend/UI/chat2.png)
 
-- **字段级 Schema Linking**：为每个数据库字段生成语义文档（名称+别名+角色+描述），解决"用户说'销售额'但字段叫 paid_amount"的指代问题
-- **混合检索 + 精排**：BM25（jieba 分词）+ 向量余弦检索 → RRF 倒数排名融合 → 本地 CrossEncoder（bge-reranker-base）重排
-- **Text2SQL 自修复循环**：SQL 执行失败自动携带报错信息重生成（最多 3 轮），并注入字段样例值、表关联关系提升生成准确率
-- **LangGraph 状态机编排**：13 个节点的状态图，条件路由（闲聊/数据查询/外部工具三路），Checkpoint 支撑多轮会话
-- **双层记忆系统**：短期会话历史（滚动摘要压缩）+ 长期用户偏好（"金额默认指实付金额"），规则预筛 + LLM 提炼
-- **Skill 技能系统**：可插拔技能（销售分析/客户画像），限定检索范围、注入专属指令，可与 MCP 工具联动
-- **MCP 双角色**：既可作为 MCP Client 调用外部工具（calculator 演示 server），也可作为 MCP Server 对外暴露查库能力（list_tables / describe_table / query_database）
-- **安全执行**：DuckDB 只读连接、DDL/DML 危险语句拦截、强制 LIMIT、采样值辅助 WHERE 生成
-- **LLM 失败治理**：错误分类（可重试/不可重试）+ 指数退避重试（含抖动）+ SQL 生成 JSON 结构化输出（服务端不支持自动降级）+ 图内优雅降级（LLM 故障不 500，修复循环及时止损）
-- **三层可观测性**：结构化日志（loguru，request_id 全链路关联）、Prometheus 业务指标（节点耗时/调用成本/重试次数/SQL 成功率）、请求级 Trace 落盘（节点与 LLM span，离线可分析）
-- **完整产品形态**：FastAPI 后端（REST + SSE 流式进度）+ Vue 3 前端（会话管理、SQL 卡片、结果表格、执行细节展示）
+## 核心特性
 
-## 🏗 系统架构
+- **Schema Linking 与混合检索**：先召回候选表，再以BM25+向量检索、RRF融合召回字段，补齐合法JOIN路径和时间字段；支持纯向量、Hybrid、加权与重排等策略，重排可选本地CrossEncoder或 DashScopeAPI。
+- **自动路由与有界协作**：普通查询走单智能体快速路径，明确复杂任务交由协调、查询、审核Agent串行协作；支持任务拆解、审核及有限返工。单路SQL修复耗尽仍失败时，可升级一次协作路径，避免循环切换。
+- **Text2SQL与失败治理**：采样值及业务语义辅助 SQL 生成，执行报错反馈修复；模型调用支持错误分类、指数退避重试、JSON 结构化输出及不支持时的降级。
+- **数据源接入与治理**：统一Connector、SchemaSnapshot和 QueryContext接入DuckDB/PostgreSQL；支持同库跨Schema、表/列 Policy、指标语义覆盖、一致只读快照和增量向量缓存。外部源默认拒绝访问，需显式授权。
+- **自动结果可视化**：成功查询后按数据结构选择指标卡片、折线、柱状、排名、环形、散点或分桶直方图；规则选图不增加模型调用，前端使用 ECharts 固定模板，支持SVG下载及近期历史图表恢复。空结果、截断或不适合绘图时保留表格。
+- **记忆与技能**：短期会话、滚动摘要与长期偏好共同支持多轮问答；Skill 以业务指标绑定当前数据源，缺少指标时不加载。
+- **MCP 双角色**：作为 Client 调用外部工具，也可作为 Server 对外提供表列表、表结构和只读查询能力。
+- **可观测与部署**：结构化日志、Prometheus指标及请求级 Trace；FastAPI提供REST/SSE，Vue3提供会话、结果表格与执行细节；Docker Compose编排前后端。
 
-### LangGraph Agent 状态机（核心编排图）
+## 系统架构
+
+### 核心编排
+
+下图按阶段展示主流程，将具体节点合并为功能模块。
 
 ```mermaid
-graph TD
-    START([用户提问]) --> load_memory[加载记忆<br/>load_memory_node]
-    load_memory -.有历史.-> rewrite[指代消解<br/>rewrite_node]
-    load_memory -.首轮.-> skill[技能匹配<br/>skill_node]
-    rewrite --> skill
-    skill --> route{意图路由<br/>route_node}
-    route -- chat --> chat_node[闲聊回答]
-    route -- data --> retrieve[Schema混合检索<br/>retrieve_node]
-    route -- tool --> tool_plan[工具规划<br/>tool_plan_node]
-    tool_plan -.无工具.-> chat_node
-    tool_plan -.有工具.-> tool_exec[工具执行<br/>tool_execute_node]
-    tool_exec --> answer
-    retrieve --> gen_sql[SQL生成<br/>generate_sql_node]
-    gen_sql --> execute[SQL执行<br/>execute_node]
-    execute -.成功.-> answer[自然语言回答<br/>answer_node]
-    execute -.失败且未超次.-> repair[SQL自修复<br/>repair_node] --> gen_sql
-    chat_node --> save_memory[记忆保存<br/>save_memory_node]
-    answer --> save_memory
-    save_memory --> END([完成])
+flowchart LR
+    A[用户提问] --> B[记忆加载与指代消解]
+    B --> C[Skill 匹配与意图路由]
+    C --> D[单路查询或多 Agent 协作]
+    C --> E[闲聊或 MCP 工具]
+    D --> F[回答与结果可视化]
+    E --> F
+    F --> G[保存会话与偏好]
 ```
 
-### 分层架构
+| 查询路径 | 编排过程 |
+|---|---|
+| 单智能体 | Schema 检索 → SQL 生成 → 只读执行；执行失败在预算内修复，耗尽后可升级一次多智能体 |
+| 多智能体 | 协调 Agent 规划 → 查询 Agent 执行 → 审核 Agent 校验/返工 → 收集子任务 → 汇总回答 |
+| 结果收尾 | 仅对成功单路结果或审核通过的子任务生成图表，再保存会话 |
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Vue 3 前端 (localhost:5173)                         │
-│  会话管理 · SQL卡片 · 结果表格 · SSE流式进度展示      │
-└──────────────────────┬──────────────────────────────┘
-                       │ REST + SSE（Vite代理 /api）
-┌──────────────────────▼──────────────────────────────┐
-│  FastAPI 后端 (localhost:8000)                       │
-│  /chat · /chat/stream · /sessions · /skills          │
-└──────────────────────┬──────────────────────────────┘
-                       │ graph.invoke / astream
-┌──────────────────────▼──────────────────────────────┐
-│  LangGraph Agent（13节点状态图，Checkpoint多轮）      │
-│  ┌──────────┬───────────┬──────────┬───────────┐    │
-│  │ 混合检索 │ SQL生成/修复│ 记忆系统 │ Skill×MCP │    │
-│  │BM25+向量 │ 执行器     │ 短期+长期 │ 技能注册表 │    │
-│  │RRF+rerank│ 只读安全   │ 滚动摘要 │ MCP客户端  │    │
-│  └──────────┴───────────┴──────────┴───────────┘    │
-└──────────────────────┬──────────────────────────────┘
-                       │ 只读SQL
-┌──────────────────────▼──────────────────────────────┐
-│  DuckDB 演示数据库（电商：customers/products/orders） │
-└─────────────────────────────────────────────────────┘
-```
+当前用户入口自动路由，前端与 CLI 无执行模式开关，HTTP 不接受 `execution_mode`；固定模式只用于内部评测。协作细节见 [MULTI_AGENT.md](MULTI_AGENT.md)。
 
-## 🛠 技术栈
+### 服务分层
 
-| 层 | 技术 | 说明 |
-|---|---|---|
-| Agent 编排 | LangGraph | 状态机、条件路由、Checkpoint 多轮会话 |
-| 模型接入 | OpenAI 兼容 SDK | LLM / Embedding 统一走 OpenAI 协议，可换任意兼容服务 |
-| 混合检索 | BM25(jieba) + 向量余弦 + RRF + CrossEncoder | 稀疏/稠密两路召回，RRF 融合，bge-reranker-base 本地精排 |
-| 数据库 | DuckDB | 嵌入式只读执行，零部署成本 |
-| 记忆 | JSON 落盘 + LLM 摘要/提炼 | 会话历史、滚动摘要、长期偏好 |
-| 工具生态 | MCP Python SDK | 同时实现 MCP Client 与 MCP Server |
-| 后端 | FastAPI + Uvicorn | REST + SSE（Server-Sent Events）流式 |
-| 前端 | Vue 3 + Vite | 组合式 API，fetch + ReadableStream 消费 SSE |
-| 失败治理 | tenacity | 错误分类 + 指数退避重试（含抖动）+ 结构化输出降级 |
-| 可观测性 | loguru + prometheus-client + 自研 Trace | 结构化日志（request_id 关联）/ 业务指标 / 请求级 span 落盘 |
-| 测试 | unittest + 脚本测试 | test/ 目录按模块覆盖（离线 mock，不依赖真实 API） |
+| 层 | 职责 |
+|---|---|
+| Vue 3 + ECharts | 会话、文字回答、SQL、数据表、自动图表 |
+| FastAPI | REST、SSE 节点进度、请求生命周期 |
+| LangGraph | 记忆、路由、检索、查询、审核与可视化编排 |
+| 数据源与语义层 | 授权 Schema、指标与 JOIN 定义、快照、向量缓存 |
+| DuckDB / PostgreSQL | 只读查询；PostgreSQL 支持同库跨 Schema |
+| 模型与工具 | OpenAI 兼容 LLM/Embedding、可选重排、MCP 工具 |
 
-## 📂 项目结构
 
-```
+## 项目评测
+
+评测分为业务正确性、单/多智能体配对，以及检索组件对比。
+
+### 端到端业务正确性
+
+覆盖联表去重、条件聚合、日期边界、排名、加权计算、多任务、澄清及多轮问答。冻结版本 `askdata-eval-v1`，LLM 为 `qwen3.8-max`。
+
+| 数据集 | 正确/总数 | 事实/动作正确率 | 耗时 P50 / P95 |
+|---|---:|---:|---:|
+| 开发集 | 20/27 | 74.1% | 14.61 / 50.17秒 |
+| 留出集 | 15/15 | 100% | 22.66 / 106.09秒 |
+
+留出集字段 Recall 宏平均为96.8%，15个有执行记录的查询单元首次执行均成功，因而该轮没有测得失败修复收益。15题100%的 Wilson 95%区间为79.6%–100%。详情见 [业务评测报告](evaluation/report.md) 与 [评分协议](evaluation/README.md)。
+
+### 单/多智能体对比
+
+共48次执行，主指标使用20组有标准答案的配对题，澄清题单独评估；超时及服务失败计入预算内未交付。
+
+| 模式 | 严格完成 | 复杂题完成 | 耗时 P50 / P95 | 已知输入/输出 Token |
+|---|---:|---:|---:|---:|
+| 单智能体 | 11/20（55%） | 1/10 | 92.0 / 98.9秒 | 34,632 / 20,928 |
+| 多智能体 | 12/20（60%） | 3/10 | 122.8 / 240.2秒 | 150,871 / 88,798 |
+
+多智能体在部分复杂题上完成更多，但成本和延迟显著增加。19/48次执行受 API 故障或预算影响；无已观察调用故障的9组配对子集中两者均为9/9，P50分别为24.3秒和81.0秒。Token总量包含澄清题且仅反映已知用量。详情见 [配对评测报告](evaluation/single-multi/report.md)。
+
+### 混合检索与纯向量检索
+
+检索 v2 使用40道开发题选型、16道留出题验证，包含电商目录及带相似干扰表的招聘/财务目录。各方案共享候选表筛选和结构补全。
+
+| 留出集方案 | Recall@8 | nDCG@8 | 上下文字段覆盖 | 全字段完整率 | 检索 P50 |
+|---|---:|---:|---:|---:|---:|
+| 纯向量 | 96.35% | 85.35% | 96.35% | 87.50% | 15.5毫秒 |
+| Hybrid | 97.40% | 85.62% | 100% | 100% | 14.4毫秒 |
+| Rerank | 97.71% | 91.71% | 100% | 100% | 1680.1毫秒 |
+
+开发集选定 Hybrid，兼顾覆盖与延迟。相对纯向量，上下文字段覆盖增加3.65个百分点；延迟基于缓存 Embedding 和已加载索引，非完整请求耗时。预选8题的真实 Agent 配对验收中，两种方案均7/8正确，均有1题模型超时，未观察到最终 SQL 正确率差异。详情见 [检索评测报告](evaluation/retrieval-v2/report.md)。
+
+以上均为小样本项目评测；参考标注由助手编写并执行校验，缺少独立人工审计，留出集与开发集仍有业务结构和模板相关性。数据源权限、漂移等参考 SQL 重放属于工程验收，不计为模型业务准确率。
+
+## 技术栈
+
+| 模块 | 技术 |
+|---|---|
+| 编排与服务 | LangGraph、FastAPI、Uvicorn |
+| 检索与重排 | BM25/jieba、Embedding、RRF、可选本地 CrossEncoder / DashScope |
+| 数据访问与安全 | DuckDB、PostgreSQL、SQLGlot、表/列 Policy |
+| 模型调用 | OpenAI 兼容 SDK、tenacity |
+| 前端与可视化 | Vue 3、Vite 8、ECharts 6 |
+| 观测与部署 | loguru、prometheus-client、JSONL Trace、Docker Compose、Nginx |
+
+## 项目结构
+
+```text
 askdata/
 ├── backend/
-│   ├── app/              # 模型客户端（LLM/Embedding/Rerank）、配置、数据结构
-│   ├── agent/            # LangGraph：graph（图结构）、nodes（节点实现）、state（状态定义）、runtime（服务层）
-│   ├── retrieval/        # store（字段文档）、service（向量索引）、ranker（BM25/RRF/混合检索）
-│   ├── sql/              # generator（SQL生成/修复prompt）、executor（只读安全执行）、prompts
-│   ├── memory/           # conversation（短期+滚动摘要）、long_term（长期偏好）
-│   ├── skill/            # 技能注册表（扫描 data/skills/*/skill.json）
-│   ├── mcp_server/       # MCP Server：对外暴露查库工具
-│   ├── mcp_client/       # MCP Client：管理外部工具服务器（含 calculator 演示）
-│   ├── server/           # FastAPI 层：路由、schema、lifespan
-│   ├── observability/    # 可观测性：日志/trace/指标/中间件（request_id 贯穿）
-│   ├── data/             # 演示数据库、种子数据、技能定义、会话存储、trace落盘
-│   ├── test/             # 各模块验证脚本
-│   ├── main.py           # CLI 交互入口（python main.py）
-│   └── requirements.in   # 依赖清单（pip-compile 管理）
-└── frontend/             # Vue 3 + Vite（chat / sessions / skills 界面）
+│   ├── agent/          # 状态图、自动路由、单路查询与协作
+│   ├── app/            # 模型客户端与配置
+│   ├── datasources/    # Connector、权限、快照与语义治理
+│   ├── retrieval/      # 表/字段召回、融合与向量缓存
+│   ├── sql/            # SQL 生成、修复与安全执行
+│   ├── visualization/  # 结果校验、选图规则与图表协议
+│   ├── memory/         # 会话、摘要与长期偏好
+│   ├── skill/          # 业务指标技能
+│   ├── mcp_client/     # 外部工具接入
+│   ├── mcp_server/     # 对外只读查库工具
+│   ├── server/         # REST / SSE
+│   ├── observability/  # 日志、指标与 Trace
+│   ├── evaluation/     # 业务、检索及数据包评测运行器
+│   └── data/           # 演示数据、技能、会话与缓存
+├── evaluation/         # 数据集、冻结清单、运行记录与报告
+├── frontend/           # Vue 界面；UI/ 存放运行截图
+├── docs/assets/        # README 图标
+└── compose.yaml        # 前后端容器编排
 ```
+
+<a id="quick-start"></a>
 
 ## 🚀 快速开始
 
-Docker 部署步骤、F 盘存储配置和日常管理命令见 [DOCKER.md](DOCKER.md)。
+Docker 使用 Nginx 前端容器与 FastAPI 后端容器，支持 SSE 转发、健康检查及会话/偏好持久化挂载。准备模型配置与部署数据后，在项目根目录运行：
+
+```bash
+docker compose --env-file .env.docker up -d --build
+```
+
+打开 http://localhost:8080 。完整准备步骤、模型缓存与挂载路径见 [Docker 部署说明](DOCKER.md)。
 
 ### 环境要求
 
 - Python 3.11（conda 环境 `askdata`）
-- Node.js ≥ 18（验证于 v24）
+- Node.js 24（当前前端使用 Vite 8）
 - 兼容 OpenAI 协议的 LLM 服务（DeepSeek / Qwen / SiliconFlow 等均可）
 
 ### 1. 后端准备
 
 ```bash
 cd backend
-pip install -r requirements.txt   # 或按 requirements.in 手动安装
-# 本地 rerank 模型（可选，约1.1GB）：sentence-transformers 会首次使用时自动下载
-# 国内网络建议先设置镜像：export HF_ENDPOINT=https://hf-mirror.com
+pip install -r requirements.txt
 ```
 
 配置 `backend/.env`（参考 `.env.example`）：
@@ -149,14 +181,20 @@ LLM_API_KEY=你的API密钥
 LLM_MODEL_ID=对话模型名
 LLM_EMBEDDING_MODEL=向量模型名
 LLM_TIMEOUT=120
-# RERANK_MODEL_ID=BAAI/bge-reranker-base   # 可选，默认即此模型
+RETRIEVAL_STRATEGY=hybrid
+# 可选重排：RETRIEVAL_STRATEGY=rerank
+# RERANK_BACKEND=local 或 dashscope
+# 本地模型：RERANK_MODEL_ID=BAAI/bge-reranker-base
+# API重排另配 RERANK_API_KEY、RERANK_API_MODEL
 ```
 
-生成演示数据（三张电商表，600 条订单）：
+首次使用且默认演示数据库不存在时，生成三张电商表、600条订单：
 
 ```bash
 python data/seed_demo_data.py
 ```
+
+该脚本会重建演示表；已有数据时无需重复执行。演示订单日期为2026年6月至8月，提问时建议明确指定期间。
 
 ### 2. 三种运行方式
 
@@ -179,104 +217,34 @@ npm install
 npm run dev      # 打开 http://localhost:5173
 ```
 
-### 4. 体验示例
+### 4. 数据源配置
 
-| 输入 | 触发链路 |
-|---|---|
-| 华东地区上月销售额是多少 | Schema检索 → SQL → 执行 → 回答（自动激活"销售分析"技能） |
-| 那华南呢？ | 多轮指代消解 → 改写为完整问题 |
-| 帮我计算 3*5+2 | 意图路由 → MCP 工具链路（calculator） |
-| 记住：金额默认看实付金额 | 长期记忆提炼 → 后续查询自动应用 |
-| 你好 | 闲聊路由，不查库 |
+未设置 `DATA_SOURCE_FILE` 时使用默认电商 DuckDB。接入其他数据源时，复制 `backend/datasource.example.json`、`policy.example.json` 和 `semantics.example.json` 为本地配置，修改连接、授权表/列、指标口径及合法JOIN，再在 `backend/.env` 设置：
 
-## 📡 API 一览
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | /api/health | 健康检查 |
-| POST | /api/chat | 提问，返回 answer / SQL / 表格数据 / 命中字段 / 自修复记录 / trace_id |
-| POST | /api/chat/stream | SSE 流式：逐节点推送执行进度与中间结果 |
-| GET | /api/sessions | 会话列表 |
-| GET | /api/sessions/{id} | 会话完整历史 |
-| DELETE | /api/sessions/{id} | 删除会话 |
-| GET | /api/skills | 可用技能列表 |
-| GET | /metrics | Prometheus 业务指标（LLM调用/重试/Token/节点耗时/SQL成功率） |
-
-**排查约定**：所有响应携带 `X-Request-ID` 头（也接受客户端传入）；`/api/chat` 响应含 `trace_id`。
-日志（`data/logs/app.jsonl`）、trace（`data/traces/*.jsonl`）、指标三者通过 request_id/trace_id 关联。
-
-## 🧠 核心技术设计
-
-**为什么做字段级 Schema 检索？** Text2SQL 的核心难点不是 SQL 语法而是 Schema Linking——用户的业务词（"销售额"）和物理字段名（paid_amount）对不上。把每个字段变成一条含中文标签、别名、角色（指标/维度/时间/过滤/外键）的语义文档，检索就变成了语义匹配问题；角色标注同时指导 SQL 生成（指标字段可聚合、维度字段需 GROUP BY）。
-
-**为什么混合检索？** 向量检索对语义改写敏感（"下单日期" vs "成交日期"），BM25 对精确词面敏感，两者互补。RRF（倒数排名融合）不依赖分数量纲、无需调参即可融合两路排名，是工业界标准做法；最后用 CrossEncoder 精排（逐对打分而非单塔编码）进一步提升精度。
-
-**为什么自修复循环？** LLM 生成的 SQL 约 10~20% 首轮执行失败（表名/别名/函数错误）。将 DuckDB 的结构化报错回喂给 LLM 重生成，配合"采样字段真实取值"（如 status 的枚举值）填充 prompt，可修复大部分错误——这是 Text2SQL 生产中成本最低、收益最高的策略。
-
-**为什么用 LangGraph？** 流程本身可以用纯 Python 写，但 LangGraph 提供了三样难以替代的能力：① 状态机与条件路由的声明式表达（三路意图分支、失败循环）；② Checkpoint 机制让每轮对话状态天然隔离又可回溯（thread_id 多轮会话）；③ 图可视化（本项目的 mermaid 图直接由 `graph.get_graph().draw_mermaid()` 导出）。用框架的正确姿势是"先有流程，再用图组织"。
-
-**记忆为什么分层？** 短期记忆（会话历史）解决指代消解；滚动摘要解决长对话的上下文膨胀；长期记忆解决跨会话偏好（"金额默认实付金额"）。用触发词规则预筛 + LLM 提炼，避免每轮都调用 LLM 提炼记忆浪费 token。
-
-**Skill × MCP 怎么联动？** 技能 = 专属指令 + 检索范围 + 工具白名单；MCP 把外部工具统一成 function calling schema。技能命中时限制检索只查相关表、只暴露该技能声明的 MCP 工具——实现"按需加载能力"的 Agent 设计。
-
-**为什么错误要分类后再重试？** 不是所有失败都值得重试：限流（429）、超时、连接错误、服务端 5xx 是瞬态的，重试能恢复；鉴权失败、参数错误是确定性的，重试只会浪费预算。把 OpenAI SDK 异常映射成「可重试/不可重试」两类，用指数退避 + 随机抖动（wait_random_exponential）避免多请求同时重试造成"惊群"。每次调用的重试次数计入指标，是评估"失败治理收益"的直接证据。
-
-**为什么 SQL 生成用 JSON 结构化输出？** 正则从自由文本提取 SQL 是 Text2SQL 的隐形杀手（模型多解释一句就提取失败）。用 response_format=json_object 约束输出协议，解析器先按 JSON 解析、失败再逐级降级到正则兜底；服务端不支持 response_format 时 ModelClient 自动降级为普通文本模式重试，兼容任意 OpenAI 兼容服务。
-
-**LLM 故障时图怎么走？** 生成节点重试耗尽后不抛异常（否则整图失败→HTTP 500），而是写入 llm_error 状态，执行路由识别后直接终止修复循环（修复同样依赖 LLM，继续循环只会浪费预算），最终给用户诚实报错；路由/改写/闲聊/工具规划/回答等节点各自有降级路径，LLM 完全宕机时系统依然可控地响应。
-
-**可观测性为什么分三层？** 日志解决"当时发生了什么"（request_id 全链路关联）；指标解决"系统整体健康度"（节点 P50/P95、调用成本、SQL 首轮成功率——问题量化后才能优化）；trace 解决"这一次请求慢在哪"（节点与 LLM span 时间线落盘 JSONL，离线可分析）。全部本地运行不依赖外部服务，trace 结构标准化，后续可无缝迁移 Langfuse/OpenTelemetry 后端。子图（查询 Agent）通过 config 继承父图 callbacks，保证协作模式的节点也进入 trace。
-
-## 🧪 测试
-
-```bash
-cd backend
-python -m unittest discover -s test -p "test_collaboration.py" -v   # 多智能体协作
-python -m unittest test.test_model_client test.test_observability test.test_sql_json -v
-python test/test_graph.py      # LangGraph 全链路（mock）
-python test/test_memory.py     # 记忆模块
-# ... 其余模块见下表（均可离线运行，不依赖真实 API）
+```ini
+DATA_SOURCE_FILE=datasource.local.json
 ```
 
-| 文件 | 覆盖 |
+更换数据库使用新的 `source_id`。相对配置路径以 `backend/` 为基准，配置内部文件路径以该配置所在目录为基准。修改 Schema、Policy 或语义后重启后端，重建上下文与索引。[数据源治理与接入](backend/datasources/GOVERNANCE.md)。
+
+### 5. 体验示例
+
+
+| 场景 | 示例提问 |
 |---|---|
-| test_retrieval.py | BM25 / 向量检索 / RRF 融合（需真实 API） |
-| test_schema_store.py | 字段文档生成 |
-| test_generator.py | SQL 生成与修复 prompt（mock） |
-| test_executor.py | 只读执行、危险语句拦截、LIMIT 注入 |
-| test_graph.py | LangGraph 全链路（mock 模式） |
-| test_memory.py | 会话记忆、滚动摘要、长期记忆 |
-| test_skill_registry.py | 技能加载与关键词匹配 |
-| test_mcp_server.py | MCP Server 工具 |
-| test_tool_manager.py | MCP Client 工具管理 |
-| test_collaboration.py | 多智能体协作：规划/审核/返工/失败隔离/模式切换 |
-| test_model_client.py | LLM 重试退避、错误分类、JSON模式降级、流式、用量指标 |
-| test_observability.py | trace 生命周期/幂等/落盘、回调、中间件 request_id |
-| test_sql_json.py | SQL 响应解析：JSON 优先 + 正则兜底 |
+| 趋势分析 | 2026年6月1日至8月31日，按月统计已支付订单的实付金额和订单数，分别展示变化趋势。 |
+| 多任务分析 | 分别统计2026年6月至8月各地区已支付订单的实付金额，以及同期销售额最高的5种商品，说明统计口径。 |
+| 品类构成 | 2026年6月1日至8月31日，各商品品类已支付订单实付金额分别是多少，占同期总实付金额的比例是多少？按占比降序排列。 |
+| 客户分析 | 2026年6月至8月，按客户等级统计已支付订单的去重客户数、订单数和实付金额，按实付金额降序排列。 |
+| 多轮追问 | 先问“2026年6月华东地区已支付订单实付金额是多少？”，再问“那华南呢？按相同口径再看7月。” |
+| 工具计算 | 使用计算器，计算销售额从275万元增长到320万元的增长率，保留两位小数。 |
 
-## 🗺 Roadmap
+图表类型由结果结构及问题共同决定；空结果或不适合绘图的结果使用表格。可展开执行细节核对 SQL、子任务和审核记录。可视化能力说明见 [自动可视化](backend/visualization/README.md)。
 
-- [x] 字段级 Schema 检索与向量索引
-- [x] 混合检索（BM25 + 向量 + RRF + CrossEncoder 重排）
-- [x] Text2SQL 最小闭环 + 自修复循环
-- [x] LangGraph 状态机改造（13 节点）
-- [x] 会话记忆、滚动摘要、长期偏好
-- [x] Skill 技能系统 × MCP 工具生态
-- [x] FastAPI 后端（REST + SSE）
-- [x] Vue 3 前端
-- [x] LLM 失败治理：错误分类 + 指数退避重试 + JSON 结构化输出（含降级）
-- [x] 三层可观测性：结构化日志 / Prometheus 指标 / 请求级 Trace
-- [ ] token 级流式回答（ModelClient 已提供 llm_stream，待接入 answer_node 与 SSE）
-- [ ] 检索质量评测集（固定 query 集 + 命中率指标）
-- [ ] Checkpoint 持久化（SqliteSaver，替代内存版）
+## 参考
 
-## 📚 参考
-
-- [LangGraph](https://github.com/langchain-ai/langgraph) —— Agent 编排框架
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) —— Agent 工具协议
-- [BGE Reranker](https://huggingface.co/BAAI/bge-reranker-base) —— CrossEncoder 精排模型
-- [DuckDB](https://duckdb.org/) —— 嵌入式分析型数据库
-
----
-
-开发过程记录见 [DEV_LOG.md](DEV_LOG.md)。
+- [LangGraph](https://github.com/langchain-ai/langgraph)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [DuckDB](https://duckdb.org/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [ECharts](https://echarts.apache.org/)

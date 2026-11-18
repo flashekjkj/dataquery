@@ -124,7 +124,8 @@ async def chat_stream(req:ChatRequest,request:Request):
                         # 只挑前端关心的字段
                         for key in ("rewritten_question","sql","answer","success","route","active_skill",
                                     "collaboration_status", "task_plan", "task_results",
-                                    "current_task_result", "task_index", "review_round"):
+                                    "current_task_result", "task_index", "review_round",
+                                    "visualizations", "visualization_notes"):
                             if key in node_output:
                                 event[key] = node_output[key]
                         if "field_docs" in node_output:

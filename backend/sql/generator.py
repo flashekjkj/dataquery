@@ -144,6 +144,8 @@ def generate_sql(
         value_samples_text=val_text
     )
 
+    from visualization.service import query_hint
+    user_prompt += "\n" + query_hint(question)
     system_prompt=GENERATE_SQL_SYSTEM_PROMPT
     if query_context and query_context.dialect == "postgres":
         system_prompt = system_prompt.replace("DuckDB", "PostgreSQL")
@@ -190,6 +192,8 @@ def generate_repair_sql(
     )
 
 
+    from visualization.service import query_hint
+    user_prompt += "\n" + query_hint(question)
     system_prompt=REPAIR_SQL_SYSTEM_PROMPT
     if query_context:
         user_prompt += "\n查询上下文：" + json.dumps({"source_id": query_context.source_id, "dialect": query_context.dialect, "schema_version": query_context.snapshot.version})

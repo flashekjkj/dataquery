@@ -30,8 +30,12 @@ async function openSession(id) {
   // 后端历史turns转成前端消息结构（历史里没有表格数据，只有sql和answer）
   messages.value = data.turns.map(t => ({
     role: t.role,
+    timestamp: t.timestamp,
     content: t.role === 'assistant' ? (t.answer || t.content || '') : (t.content || ''),
     sql: t.sql || null,
+    queryResult: t.query_result || null,
+    visualizations: t.visualizations || [],
+    visualizationNotes: t.visualization_notes || [],
     collaborationStatus: t.collaboration_status,
     taskPlan: t.task_plan,
     taskResults: t.task_results || [],
@@ -57,16 +61,19 @@ async function removeSession(id) {
 
 async function send(question) {
   if (loading.value) return
-  messages.value.push({ role: 'user', content: question })
+  messages.value.push({ role: 'user', content: question, timestamp: new Date().toISOString() })
   loading.value = true
   try {
     const r = await chat(question, currentSessionId.value, null)
     currentSessionId.value = r.session_id
     messages.value.push({
       role: 'assistant',
+      timestamp: new Date().toISOString(),
       content: r.answer,
       sql: r.final_sql,
       queryResult: r.query_result,
+      visualizations: r.visualizations || [],
+      visualizationNotes: r.visualization_notes || [],
       retrievedDocs: r.retrieved_docs,
       attempts: r.attempts,
       activeSkill: r.active_skill,
@@ -78,7 +85,7 @@ async function send(question) {
     })
     refreshSessions()
   } catch (e) {
-    messages.value.push({ role: 'assistant', content: `❌ 出错了：${e.message}` })
+    messages.value.push({ role: 'assistant', timestamp: new Date().toISOString(), content: `❌ 出错了：${e.message}` })
   } finally {
     loading.value = false
   }
@@ -93,7 +100,7 @@ onMounted(() => {
   <div class="layout">
     <button v-if="sidebarOpen" class="sidebar-backdrop" aria-label="关闭会话列表" @click="sidebarOpen = false"></button>
     <aside class="sidebar" :class="{ open: sidebarOpen }" @keydown.esc="sidebarOpen = false">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">A<span>·</span></span><div><h1>AskData</h1><p>让数据回应你的问题</p></div><button class="close-sidebar" aria-label="关闭会话列表" @click="sidebarOpen = false">×</button></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><h1>AskData</h1><p>让数据回应你的问题</p></div><button class="close-sidebar" aria-label="关闭会话列表" @click="sidebarOpen = false">×</button></div>
       <SessionList
         :sessions="sessions"
         :disabled="loading"

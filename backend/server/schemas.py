@@ -3,6 +3,7 @@ from typing import Any,List,Optional,Literal
 
 from pydantic import BaseModel,Field,ConfigDict
 from agent.contracts import TaskPlan, QueryTaskResult
+from visualization.models import ChartSpec
 
 
 class ChatRequest(BaseModel):
@@ -46,6 +47,8 @@ class ChatResponse(BaseModel):
     collaboration_status: str = "single"
     task_plan: Optional[TaskPlan] = None
     task_results: List[QueryTaskResult] = Field(default_factory=list)
+    visualizations: List[ChartSpec] = Field(default_factory=list)
+    visualization_notes: List[str] = Field(default_factory=list)
 
 class SkillInfo(BaseModel):
     """GET /api/skills 单条技能信息"""

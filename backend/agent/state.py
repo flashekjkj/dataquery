@@ -74,3 +74,6 @@ class AskDataState(TypedDict):
     current_task_result: Optional[Dict[str, Any]]
     tool_success: bool
     degraded: bool
+
+    visualizations: List[Dict[str, Any]]
+    visualization_notes: List[str]

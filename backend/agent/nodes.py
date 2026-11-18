@@ -370,6 +370,9 @@ def build_nodes(model_client, hybrid, executor, conv_memory, long_term_memory,sk
                 "collaboration_status": state.get("collaboration_status", "single"),
                 "task_plan": state.get("task_plan"),
                 "task_results": state.get("task_results", []),
+                "query_result": state["query_result"].model_dump(mode="json") if state.get("query_result") is not None else None,
+                "visualizations": state.get("visualizations", []),
+                "visualization_notes": state.get("visualization_notes", []),
             })
         except Exception:
             pass

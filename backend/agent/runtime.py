@@ -86,7 +86,11 @@ def initial_agent_state(question, forced_skill=None, execution_mode="auto"):
     if execution_mode not in ("auto", "single", "multi"):
         raise ValueError("execution_mode 必须是 auto/single/multi")
     return {"user_question": question, "attempts": 0, "attempts_log": [],
-            "forced_skill": forced_skill, "execution_mode": execution_mode}
+            "forced_skill": forced_skill, "execution_mode": execution_mode,
+            "visualizations": [], "visualization_notes": [],
+            "query_result": None, "sql": None, "success": False,
+            "task_results": [], "task_plan": None, "collaboration_status": "single",
+            "fallback_used": False, "degraded": False, "llm_error": None, "last_error": None}
 
 
 def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Optional[str] = None,
@@ -141,5 +145,7 @@ def ask_data_agent(graph, user_question: str, thread_id: str,forced_skill:Option
         "task_results": final_state.get("task_results") or [],
         "trace_id": trace.trace_id,
         "snapshot": snapshot_info,
+        "visualizations": final_state.get("visualizations", []),
+        "visualization_notes": final_state.get("visualization_notes", []),
     }
     return result

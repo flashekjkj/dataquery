@@ -37,6 +37,8 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
         return {"fallback_used": True, "sql": None, "query_result": None,
                 "success": False, "answer": "", "llm_error": None, "last_error": None}
 
+    from visualization.service import build_visualizations
+    graph_builder.add_node("visualization_node", build_visualizations)
     graph_builder.add_node("fallback_node", fallback_node)
     for name, node in collaboration_nodes.items():
         graph_builder.add_node(name, node)
@@ -144,7 +146,7 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
                   s["task_index"] < len(s["task_plan"]["tasks"]) else "answer",
         {"next": "query_agent_node", "answer": "supervisor_answer_node"},
     )
-    graph_builder.add_edge("supervisor_answer_node", "save_memory_node")
+    graph_builder.add_edge("supervisor_answer_node", "visualization_node")
 
     # 工具链路：规划→（有工具调用）执行→回答；（无工具调用）降级闲聊
     graph_builder.add_conditional_edges(
@@ -177,8 +179,9 @@ def build_graph(model_client,hybrid,executor,conv_memory,long_term_memory,max_at
     graph_builder.add_edge("fallback_node", "supervisor_node")
 
     # 闲聊/数据两路汇聚到记忆保存节点
-    graph_builder.add_edge("chat_node","save_memory_node")
-    graph_builder.add_edge("answer_node","save_memory_node")
+    graph_builder.add_edge("chat_node","visualization_node")
+    graph_builder.add_edge("answer_node","visualization_node")
+    graph_builder.add_edge("visualization_node","save_memory_node")
 
     # 记忆保存后结束
     graph_builder.add_edge("save_memory_node",END)
